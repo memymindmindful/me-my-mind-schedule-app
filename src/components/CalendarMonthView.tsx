@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { BranchLocation, ScheduleEvent, DayCalendarInfo, DayBarConfig } from '../types';
 import { loadMonthBars } from '../utils/adminStorage';
 import { Language, TRANSLATIONS } from '../utils/translations';
@@ -11,7 +11,6 @@ interface CalendarMonthViewProps {
   onNextMonth: () => void;
   selectedBranch: BranchLocation | 'All';
   onToggleBranchFilter: (branch: BranchLocation) => void;
-  onResetToNakhonsawan?: () => void;
   selectedDateStr: string | null;
   onSelectDate: (dateStr: string, events: ScheduleEvent[], dayInfo?: DayCalendarInfo) => void;
   onOpenEventDetail: (event: ScheduleEvent) => void;
@@ -26,7 +25,6 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
   onNextMonth,
   selectedBranch,
   onToggleBranchFilter,
-  onResetToNakhonsawan,
   selectedDateStr,
   onSelectDate,
   onOpenEventDetail,
@@ -204,13 +202,17 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
           {/* Nakhonsawan */}
           <button
             onClick={() => onToggleBranchFilter('Nakhonsawan')}
-            className={`flex items-center gap-2 px-1.5 py-0.5 rounded-full transition-all cursor-pointer ${
-              selectedBranch === 'Nakhonsawan' ? 'bg-[#E84D84]/15 font-bold ring-1 ring-[#E84D84]/30' : 'hover:opacity-80'
+            className={`flex items-center gap-2 px-2 py-0.5 rounded-full transition-all cursor-pointer ${
+              selectedBranch === 'Nakhonsawan' 
+                ? 'bg-[#E84D84]/15 font-bold ring-1 ring-[#E84D84]/40 text-[#E84D84]' 
+                : 'hover:opacity-80 text-[#333333]'
             }`}
             title={lang === 'th' ? 'กรองเฉพาะสาขานครสวรรค์' : 'Filter by Nakhonsawan Main Sanctuary'}
           >
-            <span className="w-3.5 h-3.5 rounded-full border border-[#D5CEC7] bg-[#FFFFFF] inline-block shadow-2xs flex-shrink-0" />
-            <span className={`leading-none ${selectedBranch === 'Nakhonsawan' ? 'text-[#E84D84]' : 'text-[#333333]'}`}>
+            <span className="w-3.5 h-3.5 rounded-full border border-[#D5CEC7] bg-[#FFFFFF] inline-flex items-center justify-center shadow-2xs flex-shrink-0">
+              {selectedBranch === 'Nakhonsawan' && <Check className="w-2.5 h-2.5 text-[#E84D84] stroke-[3]" />}
+            </span>
+            <span className="leading-none">
               {t.nakhonsawan}
             </span>
           </button>
@@ -218,13 +220,17 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
           {/* Ratchathewi */}
           <button
             onClick={() => onToggleBranchFilter('Ratchathewi')}
-            className={`flex items-center gap-2 px-1.5 py-0.5 rounded-full transition-all cursor-pointer ${
-              selectedBranch === 'Ratchathewi' ? 'bg-[#E84D84]/15 font-bold ring-1 ring-[#E84D84]/30' : 'hover:opacity-80'
+            className={`flex items-center gap-2 px-2 py-0.5 rounded-full transition-all cursor-pointer ${
+              selectedBranch === 'Ratchathewi' 
+                ? 'bg-[#E84D84]/15 font-bold ring-1 ring-[#E84D84]/40 text-[#E84D84]' 
+                : 'hover:opacity-80 text-[#333333]'
             }`}
             title={lang === 'th' ? 'กรองเฉพาะสาขาราชเทวี' : 'Filter by Ratchathewi Bangkok Branch'}
           >
-            <span className="w-3.5 h-3.5 rounded-full bg-[#F7C2D2] inline-block shadow-2xs flex-shrink-0" />
-            <span className={`leading-none ${selectedBranch === 'Ratchathewi' ? 'text-[#E84D84]' : 'text-[#333333]'}`}>
+            <span className="w-3.5 h-3.5 rounded-full bg-[#F7C2D2] inline-flex items-center justify-center shadow-2xs flex-shrink-0">
+              {selectedBranch === 'Ratchathewi' && <Check className="w-2.5 h-2.5 text-[#E84D84] stroke-[3]" />}
+            </span>
+            <span className="leading-none">
               {t.ratchathewi}
             </span>
           </button>
@@ -232,34 +238,22 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
           {/* On-Tour */}
           <button
             onClick={() => onToggleBranchFilter('On-Tour')}
-            className={`flex items-center gap-2 px-1.5 py-0.5 rounded-full transition-all cursor-pointer ${
-              selectedBranch === 'On-Tour' ? 'bg-[#9E674F]/15 font-bold ring-1 ring-[#9E674F]/30' : 'hover:opacity-80'
+            className={`flex items-center gap-2 px-2 py-0.5 rounded-full transition-all cursor-pointer ${
+              selectedBranch === 'On-Tour' 
+                ? 'bg-[#9E674F]/15 font-bold ring-1 ring-[#9E674F]/40 text-[#9E674F]' 
+                : 'hover:opacity-80 text-[#333333]'
             }`}
             title={lang === 'th' ? 'กรองเฉพาะ On-Tour' : 'Filter by On-Tour Retreats'}
           >
-            <span className="w-3.5 h-3.5 rounded-full bg-[#9E674F] inline-block shadow-2xs flex-shrink-0" />
-            <span className={`leading-none ${selectedBranch === 'On-Tour' ? 'text-[#9E674F]' : 'text-[#333333]'}`}>
+            <span className="w-3.5 h-3.5 rounded-full bg-[#9E674F] inline-flex items-center justify-center shadow-2xs flex-shrink-0">
+              {selectedBranch === 'On-Tour' && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
+            </span>
+            <span className="leading-none">
               {t.onTour}
             </span>
           </button>
-
-          {/* Reset button: defaults calendar to Nakhonsawan only without deleting any data */}
-          {selectedBranch !== 'Nakhonsawan' && (
-            <button
-              onClick={() => {
-                if (onResetToNakhonsawan) {
-                  onResetToNakhonsawan();
-                } else {
-                  onToggleBranchFilter('Nakhonsawan');
-                }
-              }}
-              className="text-[10px] text-[#888] hover:text-[#E84D84] underline underline-offset-2 pt-0.5 px-1 cursor-pointer transition-colors"
-              title={lang === 'th' ? 'รีเซ็ตกลับเป็นค่าเริ่มต้น (สาขานครสวรรค์)' : 'Reset default view (Nakhonsawan only)'}
-            >
-              {lang === 'th' ? '↺ รีเซ็ต (นครสวรรค์)' : '↺ Reset (Nakhonsawan)'}
-            </button>
-          )}
         </div>
+
       </div>
 
       {/* Weekday Strip (Su Mo Tu We Th Fr Sa / อา จ อ พ พฤ ศ ส in rounded cream container) */}

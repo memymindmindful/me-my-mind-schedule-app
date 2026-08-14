@@ -107,3 +107,96 @@ export interface MonthBarConfig {
   month: number; // 0-indexed
   days: Record<number, DayBarConfig>;
 }
+
+// Studio Settings & Public Info
+export interface StudioInfo {
+  id?: string;
+  studioNameTh: string;
+  studioNameEn: string;
+  taglineTh: string;
+  taglineEn: string;
+  sayHiMessageTh?: string;
+  sayHiMessageEn?: string;
+  logoUrl?: string;
+  defaultLanguage: 'th' | 'en';
+  currency: string;
+  timeFormat: '24h' | '12h';
+  updatedAt?: string;
+}
+
+export interface FacilitatorProfile {
+  id?: string;
+  nameTh: string;
+  nameEn: string;
+  titleTh: string;
+  titleEn: string;
+  photoUrl?: string;
+  bioShortTh: string;
+  bioShortEn: string;
+  bioLongTh: string;
+  bioLongEn: string;
+  certifications: string[];
+  lineOa?: string;
+  email?: string;
+  phone?: string;
+  instagram?: string;
+  updatedAt?: string;
+}
+
+export interface BranchItem {
+  id: string;
+  branchKey: BranchLocation | string;
+  nameTh: string;
+  nameEn: string;
+  taglineTh: string;
+  taglineEn: string;
+  addressTh: string;
+  addressEn: string;
+  landmarkTh?: string;
+  landmarkEn?: string;
+  dotColor: string;
+  pillBg: string;
+  textColor: string;
+  photoUrl?: string;
+  isActive: boolean;
+  displayOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ServiceItem {
+  id: string;
+  nameTh: string;
+  nameEn: string;
+  category: OfferingCategory | string;
+  descriptionTh: string;
+  descriptionEn: string;
+  basePrice: number;
+  durationMinutes: number;
+  photoUrl?: string;
+  isActive: boolean;
+  displayOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ContactInfo {
+  id?: string;
+  lineOa: string;
+  lineUrl: string;
+  email: string;
+  phone: string;
+  instagram: string;
+  facebook: string;
+  website: string;
+  updatedAt?: string;
+}
+
+export interface AllStudioSettings {
+  studio: StudioInfo;
+  facilitator: FacilitatorProfile;
+  branches: BranchItem[];
+  services: ServiceItem[];
+  contact: ContactInfo;
+}
+

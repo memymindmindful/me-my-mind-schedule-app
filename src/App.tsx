@@ -5,17 +5,17 @@ import {
   BookingSubmission,
   DayCalendarInfo
 } from './types';
-import { loadMonthEvents, loadMonthBars } from './utils/adminStorage';
+import { loadMonthEvents, loadMonthBars, getStoredBranchFilter, saveStoredBranchFilter } from './utils/adminStorage';
 import { apiFetchMonthEvents } from './utils/apiClient';
 import { CalendarHeader } from './components/CalendarHeader';
 import { CalendarMonthView } from './components/CalendarMonthView';
 import { DontMissSection } from './components/DontMissSection';
 import { EventDetailModal } from './components/EventDetailModal';
+import { BookingInstructionsModal } from './components/BookingInstructionsModal';
 import { OptionsMenuModal } from './components/OptionsMenuModal';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { Language, TRANSLATIONS } from './utils/translations';
-import { getGenericBookingMessage, openLineWithMessage } from './utils/lineMessages';
-import { CheckCircle, MessageCircle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 
 export default function App() {
   // Check URL query param ?view=admin or #admin
@@ -72,8 +72,9 @@ export default function App() {
   const [currentYear, setCurrentYear] = useState<number>(() => new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState<number>(() => new Date().getMonth()); // 0-indexed
 
-  // Filter state for branch tabs
-  const [selectedBranch, setSelectedBranch] = useState<BranchLocation | 'All'>('All');
+  // Filter state for branch tabs (defaults to stored branch filter or 'All')
+  const [selectedBranch, setSelectedBranch] = useState<BranchLocation | 'All'>(() => getStoredBranchFilter());
+
 
   // Search filter query
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -83,6 +84,9 @@ export default function App() {
 
   // Active event for detailed popup
   const [activeEventModal, setActiveEventModal] = useState<ScheduleEvent | null>(null);
+
+  // Generic booking instructions modal
+  const [isBookingInstructionsOpen, setIsBookingInstructionsOpen] = useState<boolean>(false);
 
   // Options & Studio guide modal
   const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState<boolean>(false);
@@ -140,13 +144,27 @@ export default function App() {
       setMonthBars(loadMonthBars(currentYear, currentMonth));
     };
 
+    const handleStartFreshReset = (evt: any) => {
+      const defaultBranch = evt.detail?.defaultBranch || 'Nakhonsawan';
+      setSelectedBranch(defaultBranch);
+      saveStoredBranchFilter(defaultBranch);
+      setSearchQuery('');
+      setSelectedDateStr(null);
+      setActiveEventModal(null);
+      setEvents([]);
+      setMonthBars(loadMonthBars(currentYear, currentMonth));
+    };
+
     window.addEventListener('storage', handleStorage);
     window.addEventListener('mmm_events_updated', handleCustomUpdate);
+    window.addEventListener('mmm_reset_start_fresh', handleStartFreshReset);
     return () => {
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('mmm_events_updated', handleCustomUpdate);
+      window.removeEventListener('mmm_reset_start_fresh', handleStartFreshReset);
     };
   }, [currentYear, currentMonth]);
+
 
   // Month navigation
   const handlePrevMonth = () => {
@@ -209,17 +227,13 @@ export default function App() {
 
   // Handle branch pill toggle
   const handleToggleBranchFilter = (branch: BranchLocation) => {
-    setSelectedBranch((prev) => (prev === branch ? 'All' : branch));
+    setSelectedBranch((prev) => {
+      const nextVal = prev === branch ? 'All' : branch;
+      saveStoredBranchFilter(nextVal);
+      return nextVal;
+    });
   };
 
-  // Handle Reset filter to Nakhonsawan only (default state without deleting data)
-  const handleResetToNakhonsawan = () => {
-    setSelectedBranch('Nakhonsawan');
-    setSelectedDateStr(null);
-    setSearchQuery('');
-    setToastMessage(lang === 'th' ? '↺ รีเซ็ต: แสดงเฉพาะสาขานครสวรรค์' : '↺ Reset: Showing Nakhonsawan branch only');
-    setTimeout(() => setToastMessage(null), 2500);
-  };
 
   // Handle date selection
   const handleSelectDate = (dateStr: string, events: ScheduleEvent[]) => {
@@ -251,17 +265,11 @@ export default function App() {
   };
 
   /**
-   * Button 1: "BOOK NOW" from Main Page (Generic Booking with Pre-filled LINE Message)
+   * CASE 1: Generic "BOOK NOW" from Main Calendar Page
+   * Shows BookingInstructionsModal -> User reviews instructions -> Opens EMPTY LINE chat for user to type own message
    */
-  const handleOpenBookNowGeneric = (currentLang: Language) => {
-    const message = getGenericBookingMessage(currentLang);
-    openLineWithMessage(message);
-    
-    setToastMessage(currentLang === 'th'
-      ? '💬 กำลังเปิด LINE Chat พร้อมข้อความจองคลาส...'
-      : '💬 Opening LINE Chat with pre-filled booking message...'
-    );
-    setTimeout(() => setToastMessage(null), 3500);
+  const handleOpenBookNowGeneric = () => {
+    setIsBookingInstructionsOpen(true);
   };
 
   // If Admin View is active, render full Admin Portal
@@ -296,7 +304,6 @@ export default function App() {
                 onNextMonth={handleNextMonth}
                 selectedBranch={selectedBranch}
                 onToggleBranchFilter={handleToggleBranchFilter}
-                onResetToNakhonsawan={handleResetToNakhonsawan}
                 selectedDateStr={selectedDateStr}
                 onSelectDate={handleSelectDate}
                 onOpenEventDetail={(evt) => setActiveEventModal(evt)}
@@ -304,11 +311,11 @@ export default function App() {
                 lang={lang}
               />
 
-              {/* 3. "DON'T MISS" Section & Main Page BOOK NOW Action */}
+              {/* 3. "DON'T MISS" Section & Main Page Generic BOOK NOW Action */}
               <DontMissSection
                 events={filteredEvents}
                 onOpenEventDetail={(evt) => setActiveEventModal(evt)}
-                onOpenBookNow={() => handleOpenBookNowGeneric(lang)}
+                onOpenBookNow={handleOpenBookNowGeneric}
                 searchQuery={searchQuery}
                 lang={lang}
               />
@@ -325,7 +332,18 @@ export default function App() {
         </div>
       )}
 
-      {/* Event Details & Booking Popup Modal */}
+      {/* CASE 1: Generic Booking Instructions Modal (Opens EMPTY LINE chat) */}
+      <BookingInstructionsModal
+        isOpen={isBookingInstructionsOpen}
+        onClose={() => setIsBookingInstructionsOpen(false)}
+        lang={lang}
+        onShowToast={(msg) => {
+          setToastMessage(msg);
+          setTimeout(() => setToastMessage(null), 3500);
+        }}
+      />
+
+      {/* CASE 2: Event Details & Booking Form Modal (Opens PRE-FILLED LINE chat) */}
       <EventDetailModal
         event={activeEventModal}
         onClose={() => setActiveEventModal(null)}
@@ -345,7 +363,6 @@ export default function App() {
         currentMonth={currentMonth}
         lang={lang}
         onToggleLang={handleToggleLang}
-        onOpenAdmin={navigateToAdmin}
       />
     </div>
   );

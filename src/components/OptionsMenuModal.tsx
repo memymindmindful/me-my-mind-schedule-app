@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   MapPin, 
@@ -7,10 +7,13 @@ import {
   MessageCircle, 
   Calendar, 
   Award,
-  Globe
+  Globe,
+  Phone,
+  Mail
 } from 'lucide-react';
-import { BRANCH_INFO, FACILITATOR_BEEVER } from '../data/scheduleData';
 import { Language, TRANSLATIONS } from '../utils/translations';
+import { AllStudioSettings } from '../types';
+import { loadStudioSettingsLocal } from '../utils/adminStorage';
 
 interface OptionsMenuModalProps {
   isOpen: boolean;
@@ -19,7 +22,6 @@ interface OptionsMenuModalProps {
   currentMonth: number;
   lang: Language;
   onToggleLang: () => void;
-  onOpenAdmin?: () => void;
 }
 
 export const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({
@@ -28,12 +30,24 @@ export const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({
   onSelectMonth,
   currentMonth,
   lang,
-  onToggleLang,
-  onOpenAdmin
+  onToggleLang
 }) => {
+  const [settings, setSettings] = useState<AllStudioSettings>(() => loadStudioSettingsLocal());
+
+  useEffect(() => {
+    const handleSettingsUpdate = () => {
+      setSettings(loadStudioSettingsLocal());
+    };
+    window.addEventListener('mmm_settings_updated', handleSettingsUpdate);
+    return () => {
+      window.removeEventListener('mmm_settings_updated', handleSettingsUpdate);
+    };
+  }, []);
+
   if (!isOpen) return null;
 
   const t = TRANSLATIONS[lang];
+  const { studio, facilitator, branches, contact } = settings;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
@@ -45,9 +59,11 @@ export const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({
         <div className="px-6 pt-5 pb-4 bg-gradient-to-b from-[#FDF2F5] to-[#FFFFFF] border-b border-[#F5E6EB] flex items-center justify-between">
           <div>
             <h3 className="text-lg font-bold text-[#E84D84] font-sans tracking-tight">
-              {t.appTitle}
+              {lang === 'th' ? studio.studioNameTh : studio.studioNameEn}
             </h3>
-            <p className="text-xs text-[#777]">{t.optionsStudioGuide}</p>
+            <p className="text-xs text-[#777]">
+              {lang === 'th' ? studio.taglineTh : studio.taglineEn}
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -89,7 +105,7 @@ export const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({
             <div className="grid grid-cols-3 gap-2">
               {[
                 { name: t.monthNames[2], idx: 2 },
-                { name: `${t.monthNames[3]} (Figma)`, idx: 3 },
+                { name: t.monthNames[3], idx: 3 },
                 { name: t.monthNames[4], idx: 4 },
                 { name: t.monthNames[5], idx: 5 },
                 { name: t.monthNames[6], idx: 6 },
@@ -116,29 +132,39 @@ export const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({
           {/* Facilitator Profile */}
           <div className="p-4 rounded-2xl bg-[#FAF0F3] border border-[#F8DDE5] space-y-2.5">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-full bg-[#E84D84] text-white flex items-center justify-center font-bold text-base shadow-sm flex-shrink-0">
-                KB
-              </div>
+              {facilitator.photoUrl ? (
+                <img
+                  src={facilitator.photoUrl}
+                  alt={facilitator.nameEn}
+                  className="w-11 h-11 rounded-full object-cover border border-[#F3CDD8] shadow-xs"
+                />
+              ) : (
+                <div className="w-11 h-11 rounded-full bg-[#E84D84] text-white flex items-center justify-center font-bold text-base shadow-sm flex-shrink-0">
+                  KB
+                </div>
+              )}
               <div>
                 <h4 className="font-bold text-sm text-[#1E1E1E]">
-                  {FACILITATOR_BEEVER.name}
+                  {lang === 'th' ? facilitator.nameTh : facilitator.nameEn}
                 </h4>
                 <span className="text-[11px] text-[#E84D84] font-semibold">
-                  {FACILITATOR_BEEVER.role}
+                  {lang === 'th' ? facilitator.titleTh : facilitator.titleEn}
                 </span>
               </div>
             </div>
             <p className="text-[#555] leading-relaxed">
-              {FACILITATOR_BEEVER.bio}
+              {lang === 'th' ? (facilitator.bioShortTh || facilitator.bioShortEn) : (facilitator.bioShortEn || facilitator.bioShortTh)}
             </p>
-            <div className="space-y-1 pt-1 border-t border-[#F3CDD8]">
-              {FACILITATOR_BEEVER.certifications.map((c, idx) => (
-                <div key={idx} className="flex items-center gap-1.5 text-[11px] text-[#666]">
-                  <Award className="w-3 h-3 text-[#E84D84] flex-shrink-0" />
-                  <span>{c}</span>
-                </div>
-              ))}
-            </div>
+            {facilitator.certifications && facilitator.certifications.length > 0 && (
+              <div className="space-y-1 pt-1 border-t border-[#F3CDD8]">
+                {facilitator.certifications.map((c, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5 text-[11px] text-[#666]">
+                    <Award className="w-3 h-3 text-[#E84D84] flex-shrink-0" />
+                    <span>{c}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Studio Branches */}
@@ -148,29 +174,33 @@ export const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({
               <span>Studio Branches</span>
             </h4>
 
-            {Object.entries(BRANCH_INFO).map(([key, branch]) => (
+            {branches.filter(b => b.isActive).map(branch => (
               <div 
-                key={key} 
+                key={branch.id} 
                 className="p-3.5 rounded-2xl bg-[#FAF7F5] border border-[#EFE8E1] space-y-1"
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-xs text-[#1E1E1E]">
-                    {lang === 'th' ? branch.nameTh : branch.name}
+                    {lang === 'th' ? branch.nameTh : branch.nameEn}
                   </span>
                   <span 
                     className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: branch.dotColor, border: branch.dotColor === '#FFFFFF' ? '1px solid #CCC' : 'none' }}
                   />
                 </div>
-                <p className="text-[11px] text-[#E84D84] font-medium">
-                  {branch.tagline}
-                </p>
+                {(branch.taglineTh || branch.taglineEn) && (
+                  <p className="text-[11px] text-[#E84D84] font-medium">
+                    {lang === 'th' ? branch.taglineTh : branch.taglineEn}
+                  </p>
+                )}
                 <p className="text-[11px] text-[#666]">
-                  📍 {branch.address}
+                  📍 {lang === 'th' ? branch.addressTh : branch.addressEn}
                 </p>
-                <p className="text-[10px] text-[#888] italic">
-                  {branch.landmark}
-                </p>
+                {(branch.landmarkTh || branch.landmarkEn) && (
+                  <p className="text-[10px] text-[#888] italic">
+                    ✨ {lang === 'th' ? branch.landmarkTh : branch.landmarkEn}
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -182,30 +212,14 @@ export const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({
               <p className="text-[11px] text-[#666]">{t.chatWithBeever}</p>
             </div>
             <a
-              href="https://line.me/R/oaMessage/@me.my.mind.mindful"
+              href={contact.lineUrl || `https://line.me/R/oaMessage/${contact.lineOa}`}
               target="_blank"
               rel="noopener noreferrer"
               className="px-3.5 py-1.5 bg-[#E84D84] text-white rounded-xl font-bold text-xs shadow-xs hover:bg-[#D43D73] transition-colors"
             >
-              @me.my.mind.mindful
+              {contact.lineOa || '@me.my.mind.mindful'}
             </a>
           </div>
-
-          {/* Admin Control Center Link */}
-          {onOpenAdmin && (
-            <div className="pt-2 border-t border-[#EFE8E1]">
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  onOpenAdmin();
-                }}
-                className="w-full py-2.5 px-3 bg-[#FAF7F5] hover:bg-[#FAF0F3] border border-[#E5DFD7] text-[#666] hover:text-[#E84D84] rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
-              >
-                <span>เข้าสู่ระบบหลังบ้าน (Admin Portal)</span>
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </div>

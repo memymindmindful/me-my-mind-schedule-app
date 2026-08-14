@@ -119,7 +119,26 @@ export function getEventBookingMessage(
 }
 
 /**
- * Helper to open LINE Official Account with pre-filled message
+ * Helper to open LINE Official Account with EMPTY message (for generic booking inquiry where user types own details)
+ */
+export function openLineWithEmptyMessage(): boolean {
+  // Direct LINE OA link without text parameter
+  const lineUrl = `https://line.me/R/ti/p/@me.my.mind.mindful`;
+
+  try {
+    const newWindow = window.open(lineUrl, '_blank');
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      window.location.href = lineUrl;
+    }
+    return true;
+  } catch {
+    window.location.href = lineUrl;
+    return true;
+  }
+}
+
+/**
+ * Helper to open LINE Official Account with pre-filled message (for event-specific booking)
  */
 export function openLineWithMessage(message: string): boolean {
   const encodedMsg = encodeURIComponent(message);

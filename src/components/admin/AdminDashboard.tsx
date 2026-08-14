@@ -21,13 +21,16 @@ import {
   Key,
   Eye,
   EyeOff,
-  ShieldAlert
+  ShieldAlert,
+  Settings
 } from 'lucide-react';
-import { checkAdminAuth, setAdminAuth, resetAllData, resetMonthEvents, resetMonthBars, getAdminCredentials } from '../../utils/adminStorage';
+import { checkAdminAuth, setAdminAuth, resetAllData, resetMonthEvents, resetMonthBars, getAdminCredentials, saveStoredBranchFilter } from '../../utils/adminStorage';
+import { apiResetData } from '../../utils/apiClient';
 import { AdminLogin } from './AdminLogin';
 import { AdminBarsManager } from './AdminBarsManager';
 import { AdminEventsManager } from './AdminEventsManager';
 import { AdminAccountSettings } from './AdminAccountSettings';
+import { AdminSettingsPage } from './AdminSettingsPage';
 import { TRANSLATIONS } from '../../utils/translations';
 
 interface AdminDashboardProps {
@@ -36,7 +39,7 @@ interface AdminDashboardProps {
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToClient }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'bars' | 'events' | 'account'>('bars');
+  const [activeTab, setActiveTab] = useState<'bars' | 'events' | 'settings' | 'account'>('bars');
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [resetTarget, setResetTarget] = useState<'month_events' | 'month_bars' | 'all_data' | null>(null);
   const [resetPasswordInput, setResetPasswordInput] = useState('');
@@ -101,14 +104,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToClient }
 
     if (resetTarget === 'month_events') {
       resetMonthEvents(currentYear, currentMonth, true);
+      apiResetData('month_events', currentYear, currentMonth).catch(() => {});
       setToastMessage(`ล้างอีเวนท์เดือน ${monthName} เรียบร้อยแล้ว`);
     } else if (resetTarget === 'month_bars') {
       resetMonthBars(currentYear, currentMonth, true);
       setToastMessage(`รีเซ็ตแถบสีเดือน ${monthName} เรียบร้อยแล้ว`);
     } else if (resetTarget === 'all_data') {
       resetAllData(true);
-      setToastMessage('ล้างข้อมูลทุกเดือนในระบบเรียบร้อยแล้ว');
+      apiResetData('all_data').catch(() => {});
+      saveStoredBranchFilter('Nakhonsawan');
+      setToastMessage('ล้างอีเวนท์ทั้งหมด และตั้งค่าเริ่มต้นมุ่งเน้นสาขานครสวรรค์เรียบร้อยแล้ว');
     }
+
 
     // Reset states
     setIsResetModalOpen(false);
@@ -237,12 +244,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToClient }
       {/* Main Admin Content Container */}
       <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-8 space-y-6">
         
-        {/* Navigation Tabs (Bars Tab vs Events Tab vs Account Tab) */}
-        <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-[#E5DFD7] shadow-2xs max-w-xl">
+        {/* Navigation Tabs (Bars Tab vs Events Tab vs Settings Tab vs Account Tab) */}
+        <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-[#E5DFD7] shadow-2xs max-w-2xl overflow-x-auto">
           <button
             type="button"
             onClick={() => setActiveTab('bars')}
-            className={`flex-1 py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            className={`flex-1 py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'bars'
                 ? 'bg-[#E84D84] text-white shadow-xs'
                 : 'text-[#666] hover:text-[#1E1E1E] hover:bg-black/5'
@@ -255,7 +262,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToClient }
           <button
             type="button"
             onClick={() => setActiveTab('events')}
-            className={`flex-1 py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            className={`flex-1 py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'events'
                 ? 'bg-[#E84D84] text-white shadow-xs'
                 : 'text-[#666] hover:text-[#1E1E1E] hover:bg-black/5'
@@ -267,15 +274,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToClient }
 
           <button
             type="button"
+            onClick={() => setActiveTab('settings')}
+            className={`flex-1 py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'settings'
+                ? 'bg-[#E84D84] text-white shadow-xs'
+                : 'text-[#666] hover:text-[#1E1E1E] hover:bg-black/5'
+            }`}
+          >
+            <Settings className="w-3.5 h-3.5" />
+            <span>3. ข้อมูลสตูดิโอ (Settings)</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveTab('account')}
-            className={`flex-1 py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            className={`flex-1 py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'account'
                 ? 'bg-[#E84D84] text-white shadow-xs'
                 : 'text-[#666] hover:text-[#1E1E1E] hover:bg-black/5'
             }`}
           >
             <KeyRound className="w-3.5 h-3.5" />
-            <span>3. บัญชี & รหัสผ่าน</span>
+            <span>4. บัญชี & รหัสผ่าน</span>
           </button>
         </div>
 
@@ -297,7 +317,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToClient }
           />
         )}
 
-        {/* Tab 3: Account & Password Manager */}
+        {/* Tab 3: Studio Settings */}
+        {activeTab === 'settings' && (
+          <AdminSettingsPage />
+        )}
+
+        {/* Tab 4: Account & Password Manager */}
         {activeTab === 'account' && (
           <AdminAccountSettings
             onCredentialsUpdated={() => {
@@ -399,10 +424,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToClient }
                     <span>3. รีเซ็ตข้อมูลทุกเดือนทั้งหมด (Start Fresh)</span>
                     <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
                   </div>
-                  <p className="text-[11px] text-rose-600/80 mt-0.5">
-                    ล้างข้อมูลอีเวนท์และแถบสีทั้งหมดทุกเดือน เพื่อส่งมอบและเริ่มใช้งานจริงจากศูนย์
+                  <p className="text-[11px] text-rose-600/90 mt-0.5 leading-relaxed">
+                    ล้างอุบลงตทั้งหมด และมุ่งเน้นไปยัง นครสวรรค์ เพื่อเตรียมกรอกข้อมูลใหม่ (Clear all events AND focus view to Nakhonsawan for fresh start)
                   </p>
                 </button>
+
 
                 <div className="pt-2 flex justify-end">
                   <button
@@ -428,7 +454,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToClient }
                   <p className="text-[11px] text-rose-700 leading-relaxed">
                     {resetTarget === 'month_events' && `อีเวนท์ทั้งหมดในเดือน ${monthName} จะถูกลบออกเป็นตารางว่าง (0 รายการ)`}
                     {resetTarget === 'month_bars' && `แถบสีทุกวันในเดือน ${monthName} จะถูกเปลี่ยนกลับเป็นสาขานครสวรรค์ปกติ (สีขาว)`}
-                    {resetTarget === 'all_data' && '⚠️ ข้อมูลอีเวนท์และแถบสีทุกเดือนจะถูกล้างออกจากระบบทั้งหมด การกระทำนี้ไม่สามารถย้อนกลับได้'}
+                    {resetTarget === 'all_data' && '⚠️ ล้างอุบลงตทั้งหมด และมุ่งเน้นไปยัง นครสวรรค์ เพื่อเตรียมกรอกข้อมูลใหม่ (Clear all events AND focus view to Nakhonsawan for fresh start)'}
                   </p>
                 </div>
 

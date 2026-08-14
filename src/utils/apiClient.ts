@@ -148,3 +148,186 @@ export async function apiDeleteEvent(id: string): Promise<any> {
   });
   return res.json();
 }
+
+/**
+ * Fetch all studio settings (Public & Admin)
+ */
+export async function apiFetchStudioSettings(): Promise<any | null> {
+  try {
+    const res = await fetch(`${API_BASE}/settings`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (json.success && json.data) {
+      return json.data;
+    }
+    return null;
+  } catch (err) {
+    console.warn('Could not fetch studio settings from server:', err);
+    return null;
+  }
+}
+
+/**
+ * Save Studio Settings (Branding & General)
+ */
+export async function apiSaveStudioSettings(settingsData: any, logoFile?: File): Promise<any> {
+  const token = getAuthToken();
+  const formData = new FormData();
+
+  Object.entries(settingsData).forEach(([key, val]) => {
+    if (val !== undefined && val !== null) {
+      formData.append(key, typeof val === 'object' ? JSON.stringify(val) : String(val));
+    }
+  });
+
+  if (logoFile) {
+    formData.append('logo', logoFile);
+  }
+
+  const res = await fetch(`${API_BASE}/admin/settings`, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: formData
+  });
+  return res.json();
+}
+
+/**
+ * Save Facilitator Profile
+ */
+export async function apiSaveFacilitator(facData: any, photoFile?: File): Promise<any> {
+  const token = getAuthToken();
+  const formData = new FormData();
+
+  Object.entries(facData).forEach(([key, val]) => {
+    if (val !== undefined && val !== null) {
+      formData.append(key, typeof val === 'object' ? JSON.stringify(val) : String(val));
+    }
+  });
+
+  if (photoFile) {
+    formData.append('photo', photoFile);
+  }
+
+  const res = await fetch(`${API_BASE}/admin/facilitator`, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: formData
+  });
+  return res.json();
+}
+
+/**
+ * Save Branch (Create or Update)
+ */
+export async function apiSaveBranch(branchData: any, photoFile?: File, id?: string): Promise<any> {
+  const token = getAuthToken();
+  const formData = new FormData();
+
+  Object.entries(branchData).forEach(([key, val]) => {
+    if (val !== undefined && val !== null) {
+      formData.append(key, typeof val === 'object' ? JSON.stringify(val) : String(val));
+    }
+  });
+
+  if (photoFile) {
+    formData.append('photo', photoFile);
+  }
+
+  const url = id ? `${API_BASE}/admin/branches/${id}` : `${API_BASE}/admin/branches`;
+  const method = id ? 'PUT' : 'POST';
+
+  const res = await fetch(url, {
+    method,
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: formData
+  });
+  return res.json();
+}
+
+/**
+ * Delete Branch
+ */
+export async function apiDeleteBranch(id: string): Promise<any> {
+  const token = getAuthToken();
+  const res = await fetch(`${API_BASE}/admin/branches/${id}`, {
+    method: 'DELETE',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  });
+  return res.json();
+}
+
+/**
+ * Save Service (Create or Update)
+ */
+export async function apiSaveService(serviceData: any, photoFile?: File, id?: string): Promise<any> {
+  const token = getAuthToken();
+  const formData = new FormData();
+
+  Object.entries(serviceData).forEach(([key, val]) => {
+    if (val !== undefined && val !== null) {
+      formData.append(key, typeof val === 'object' ? JSON.stringify(val) : String(val));
+    }
+  });
+
+  if (photoFile) {
+    formData.append('photo', photoFile);
+  }
+
+  const url = id ? `${API_BASE}/admin/services/${id}` : `${API_BASE}/admin/services`;
+  const method = id ? 'PUT' : 'POST';
+
+  const res = await fetch(url, {
+    method,
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: formData
+  });
+  return res.json();
+}
+
+/**
+ * Delete Service
+ */
+export async function apiDeleteService(id: string): Promise<any> {
+  const token = getAuthToken();
+  const res = await fetch(`${API_BASE}/admin/services/${id}`, {
+    method: 'DELETE',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  });
+  return res.json();
+}
+
+/**
+ * Reset data on server
+ */
+export async function apiResetData(resetType: 'all_data' | 'month_events' | 'month_bars', year?: number, month?: number): Promise<any> {
+  const token = getAuthToken();
+  try {
+    const res = await fetch(`${API_BASE}/admin/reset-data`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ resetType, year, month })
+    });
+    return res.json();
+  } catch (err) {
+    console.warn('apiResetData failed:', err);
+    return { success: false, error: err };
+  }
+}
+
+
