@@ -32,6 +32,7 @@ export interface ScheduleEvent {
   durationMinutes: number;
   facilitator: Facilitator;
   priceThb: number;
+  isFree?: boolean; // When true, displays 'ฟรี' / 'FREE'
   capacity: number;
   bookedCount: number;
   level: string;

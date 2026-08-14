@@ -8,13 +8,13 @@ import {
   CheckCircle2, 
   Share2, 
   Sparkles, 
-  ArrowRight,
   MessageCircle
 } from 'lucide-react';
 import { ScheduleEvent, BookingSubmission } from '../types';
 import { BRANCH_INFO } from '../data/scheduleData';
 import { Language, TRANSLATIONS } from '../utils/translations';
 import { getEventBookingMessage, openLineWithMessage } from '../utils/lineMessages';
+import { BookingForm, BookingFormData } from './BookingForm';
 
 interface EventDetailModalProps {
   event: ScheduleEvent | null;
@@ -38,20 +38,31 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   const spotsLeft = Math.max(0, event.capacity - event.bookedCount);
   const isFullyBooked = spotsLeft === 0 || event.status === 'fully_booked';
 
+  // Toggle state between event details view and booking form view
+  const [showBookingForm, setShowBookingForm] = useState(false);
+
   // Booking form state
-  const [isBookingMode, setIsBookingMode] = useState(false);
-  const [clientName, setClientName] = useState('');
-  const [clientLineId, setClientLineId] = useState('');
-  const [clientPhone, setClientPhone] = useState('');
-  const [guestsCount, setGuestsCount] = useState(1);
-  const [specialNotes, setSpecialNotes] = useState('');
+  const [bookingData, setBookingData] = useState<BookingFormData>({
+    clientName: '',
+    clientPhone: '',
+    clientLineId: '',
+    guestCount: 1,
+    specialNotes: '',
+    language: lang
+  });
+
   const [copiedLink, setCopiedLink] = useState(false);
 
   const displayName = lang === 'en' && event.englishName ? event.englishName : event.name;
   const branchName = lang === 'th' ? branchData.nameTh : branchData.name;
 
+  const isEventFree = Boolean(event.isFree || event.priceThb === 0);
+  const priceDisplayStr = isEventFree 
+    ? (lang === 'th' ? 'ฟรี (FREE)' : 'Free')
+    : `฿${event.priceThb.toLocaleString()} THB`;
+
   const handleShare = () => {
-    const text = `✨ ${displayName} - Me.My.Mind Mindfulness Studio\n📅 ${event.dateDisplay} (${event.startTime} - ${event.endTime})\n📍 ${event.locationDetails}\nExchange: ฿${event.priceThb.toLocaleString()} THB\nFacilitator: ${event.facilitator.name}\nLINE Booking: @me.my.mind.mindful`;
+    const text = `✨ ${displayName} - Me.My.Mind Mindfulness Studio\n📅 ${event.dateDisplay} (${event.startTime} - ${event.endTime})\n📍 ${event.locationDetails}\nExchange: ${priceDisplayStr}\nFacilitator: ${event.facilitator.name}\nLINE Booking: @me.my.mind.mindful`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(text);
       setCopiedLink(true);
@@ -60,42 +71,48 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   };
 
   /**
-   * Handle Button 2: Direct LINE Booking with pre-filled message for this event
+   * Action when user clicks "Send to LINE" inside the booking form
    */
-  const handleOpenBookNowWithEventDetails = () => {
-    const message = getEventBookingMessage(lang, event, guestsCount, specialNotes);
+  const handleSendBookingToLine = () => {
+    // 1. Compile message with event & user details
+    const message = getEventBookingMessage(
+      lang,
+      event,
+      bookingData.guestCount,
+      bookingData.specialNotes,
+      bookingData.clientName,
+      bookingData.clientPhone,
+      bookingData.clientLineId
+    );
+
+    // 2. Open LINE Official Account
     openLineWithMessage(message);
-    
-    if (onShowToast) {
-      onShowToast(lang === 'th'
-        ? `💬 กำลังเปิด LINE Chat พร้อมข้อมูลคลาส "${displayName}"...`
-        : `💬 Opening LINE Chat with pre-filled details for "${displayName}"...`
-      );
-    }
-  };
 
-  const handleSubmitBooking = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!clientName.trim()) return;
-
+    // 3. Register booking state locally
     onConfirmBooking({
       eventId: event.id,
       eventName: displayName,
-      clientName: clientName.trim(),
-      clientLineId: clientLineId.trim() || 'Via Web Booking',
-      clientPhone: clientPhone.trim() || 'N/A',
-      guestsCount,
-      specialNotes,
+      clientName: bookingData.clientName.trim(),
+      clientLineId: bookingData.clientLineId?.trim() || 'Via Web Booking',
+      clientPhone: bookingData.clientPhone.trim() || 'N/A',
+      guestsCount: bookingData.guestCount,
+      specialNotes: bookingData.specialNotes,
       dateDisplay: event.dateDisplay,
       timeDisplay: event.timeDisplay,
       branch: event.branch,
-      totalPriceThb: event.priceThb * guestsCount
+      totalPriceThb: isEventFree ? 0 : event.priceThb * bookingData.guestCount
     });
 
-    // Also trigger pre-filled LINE message with user's inputted details
-    handleOpenBookNowWithEventDetails();
+    if (onShowToast) {
+      onShowToast(lang === 'th'
+        ? `💬 กำลังเปิด LINE Chat พร้อมข้อมูลการจองของคุณ...`
+        : `💬 Opening LINE Chat with your booking summary...`
+      );
+    }
 
-    setIsBookingMode(false);
+    // Reset & close
+    setShowBookingForm(false);
+    onClose();
   };
 
   return (
@@ -106,7 +123,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Event Poster Banner */}
-        <div className="relative w-full h-44 sm:h-48 bg-gradient-to-tr from-[#241A20] to-[#4A2D3A] overflow-hidden flex-shrink-0">
+        <div className="relative w-full h-40 sm:h-44 bg-gradient-to-tr from-[#241A20] to-[#4A2D3A] overflow-hidden flex-shrink-0">
           {event.posterUrl ? (
             <img 
               src={event.posterUrl} 
@@ -159,7 +176,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                 {event.posterTag}
               </span>
             )}
-            <h2 className="text-[19px] sm:text-[21px] font-bold text-white leading-tight font-sans drop-shadow-md">
+            <h2 className="text-[18px] sm:text-[20px] font-bold text-white leading-tight font-sans drop-shadow-md">
               {displayName}
             </h2>
           </div>
@@ -179,7 +196,18 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
 
         {/* Scrollable Body Content */}
         <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1 text-sm font-sans text-[#2B2B2B]">
-          {!isBookingMode ? (
+          {showBookingForm ? (
+            /* STEP 3 & 4: BOOKING FORM VIEW */
+            <BookingForm
+              event={event}
+              bookingData={bookingData}
+              onBookingDataChange={setBookingData}
+              onSendToLine={handleSendBookingToLine}
+              onCancel={() => setShowBookingForm(false)}
+              lang={lang}
+            />
+          ) : (
+            /* STEP 1 & 2: EVENT DETAILS VIEW */
             <>
               {/* Date, Time, Venue Pills */}
               <div className="grid grid-cols-2 gap-2 p-3 bg-[#FAF7F5] rounded-2xl border border-[#EFE8E1]">
@@ -212,8 +240,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                     <MapPin className="w-3.5 h-3.5 text-[#E84D84] flex-shrink-0" />
                     <span className="truncate">{event.locationDetails}</span>
                   </span>
-                  <span className="font-bold text-[#E84D84] whitespace-nowrap">
-                    ฿{event.priceThb.toLocaleString()} THB
+                  <span className={`font-bold whitespace-nowrap ${isEventFree ? 'text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200' : 'text-[#E84D84]'}`}>
+                    {priceDisplayStr}
                   </span>
                 </div>
               </div>
@@ -309,153 +337,37 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                 </ul>
               </div>
             </>
-          ) : (
-            /* Booking Form View */
-            <form onSubmit={handleSubmitBooking} className="space-y-4 animate-in fade-in duration-200">
-              <div className="p-3 bg-[#FAF0F3] rounded-2xl border border-[#F8DDE5]">
-                <h4 className="font-bold text-sm text-[#E84D84]">{displayName}</h4>
-                <div className="text-xs text-[#666] mt-1 flex items-center justify-between">
-                  <span>{event.dateDisplay} • {event.timeDisplay}</span>
-                  <span className="font-bold text-[#1E1E1E]">฿{(event.priceThb * guestsCount).toLocaleString()} THB</span>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-bold text-[#444] mb-1">
-                    {t.yourName}
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                    placeholder={lang === 'th' ? 'เช่น คุณสุภาพร ว.' : 'e.g. Supaporn V.'}
-                    className="w-full p-2.5 rounded-xl border border-[#E0D7D0] focus:border-[#E84D84] outline-none text-xs"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-xs font-bold text-[#444] mb-1">
-                      {t.lineId}
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={clientLineId}
-                      onChange={(e) => setClientLineId(e.target.value)}
-                      placeholder="@yourlineid"
-                      className="w-full p-2.5 rounded-xl border border-[#E0D7D0] focus:border-[#E84D84] outline-none text-xs"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#444] mb-1">
-                      {t.phone}
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      value={clientPhone}
-                      onChange={(e) => setClientPhone(e.target.value)}
-                      placeholder="081-xxx-xxxx"
-                      className="w-full p-2.5 rounded-xl border border-[#E0D7D0] focus:border-[#E84D84] outline-none text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-[#444] mb-1">
-                    {t.guestCount}
-                  </label>
-                  <select
-                    value={guestsCount}
-                    onChange={(e) => setGuestsCount(Number(e.target.value))}
-                    className="w-full p-2.5 rounded-xl border border-[#E0D7D0] focus:border-[#E84D84] outline-none text-xs bg-white"
-                  >
-                    {[1, 2, 3, 4].map(n => (
-                      <option key={n} value={n}>
-                        {n} {t.guestCountUnit} (฿{(event.priceThb * n).toLocaleString()})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-[#444] mb-1">
-                    {t.specialNotes}
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={specialNotes}
-                    onChange={(e) => setSpecialNotes(e.target.value)}
-                    placeholder={t.specialNotesPlaceholder}
-                    className="w-full p-2.5 rounded-xl border border-[#E0D7D0] focus:border-[#E84D84] outline-none text-xs resize-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsBookingMode(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-[#DDD] font-semibold text-xs text-[#555] hover:bg-black/5 cursor-pointer"
-                >
-                  {t.back}
-                </button>
-                <button
-                  type="submit"
-                  className="flex-2 py-2.5 rounded-xl bg-[#E84D84] hover:bg-[#D43D73] font-bold text-xs text-white shadow-md cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  <span>{lang === 'th' ? '💬 ยืนยัน & ส่งข้อมูลไป LINE' : '💬 Confirm & Send to LINE'}</span>
-                </button>
-              </div>
-            </form>
           )}
         </div>
 
-        {/* Modal Bottom Actions: Dual Booking Options (Direct LINE Booking or Detailed Form) */}
-        {!isBookingMode && (
+        {/* Modal Bottom Actions: Single Clear BOOK NOW Button & Share */}
+        {!showBookingForm && (
           <div className="p-3.5 sm:p-4 bg-[#FAF7F5] border-t border-[#F0E4E8] flex items-center justify-between gap-2 sm:gap-3">
             {/* Share / Copy Details */}
             <button
+              type="button"
               onClick={handleShare}
-              className="p-2.5 px-3 rounded-xl border border-[#E0D7D0] bg-white hover:bg-black/5 text-[#555] text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors flex-shrink-0"
+              className="p-3 px-3.5 rounded-2xl border border-[#E0D7D0] bg-white hover:bg-black/5 text-[#555] text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors flex-shrink-0"
               title="Share event details"
             >
               <Share2 className="w-4 h-4 text-[#E84D84]" />
               <span className="hidden xs:inline">{copiedLink ? t.copied : t.share}</span>
             </button>
 
-            {/* Quick Button 2: Direct LINE pre-filled booking */}
+            {/* SINGLE Primary "BOOK NOW" Button -> Opens Booking Form */}
             <button
-              id="modal-quick-line-btn"
-              onClick={handleOpenBookNowWithEventDetails}
+              id="modal-primary-book-now-btn"
+              type="button"
+              onClick={() => setShowBookingForm(true)}
               disabled={isFullyBooked}
-              className="flex-1 py-2.5 px-3 sm:px-4 rounded-xl bg-[#E84D84] hover:bg-[#D43D73] active:scale-98 text-white text-xs font-bold shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-3 px-4 rounded-2xl bg-[#E84D84] hover:bg-[#D43D73] active:scale-[0.98] text-white text-xs sm:text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <MessageCircle className="w-4 h-4 flex-shrink-0" />
-              <span className="truncate">
+              <span>
                 {isFullyBooked 
                   ? t.fullyBooked 
-                  : lang === 'th' 
-                    ? '📱 BOOK NOW (Pre-filled)' 
-                    : '📱 BOOK NOW (Pre-filled)'}
+                  : (lang === 'th' ? '💬 จองเลย (BOOK NOW)' : '💬 BOOK NOW')}
               </span>
-            </button>
-
-            {/* Optional Detailed Form Button */}
-            <button
-              id="modal-custom-form-btn"
-              onClick={() => setIsBookingMode(true)}
-              disabled={isFullyBooked}
-              className="p-2.5 px-3 rounded-xl border border-[#E84D84]/40 bg-[#FAF0F3] hover:bg-[#FCE8EF] text-[#E84D84] text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-              title={lang === 'th' ? 'กรอกข้อมูลสำรองที่นั่ง' : 'Fill reservation form'}
-            >
-              <span>{lang === 'th' ? 'กรอกฟอร์ม' : 'Form'}</span>
-              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         )}

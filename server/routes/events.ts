@@ -27,6 +27,7 @@ export function mapRowToEvent(columns: string[], row: any[]) {
     bookedCount: Number(obj.bookedCount) || 0,
     status: obj.status || 'available',
     priceThb: Number(obj.priceThb) || 0,
+    isFree: Boolean(obj.isFree || (obj.priceThb === 0 && obj.isFree !== 0)),
     level: obj.level || 'All Levels',
     description: obj.description || '',
     locationDetails: obj.locationDetails || '',

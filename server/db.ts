@@ -54,6 +54,7 @@ export async function initDatabase(): Promise<Database> {
       bookedCount INTEGER DEFAULT 0,
       status TEXT DEFAULT 'available',
       priceThb INTEGER DEFAULT 0,
+      isFree INTEGER DEFAULT 0,
       level TEXT DEFAULT 'All Levels',
       description TEXT,
       locationDetails TEXT,
@@ -73,6 +74,13 @@ export async function initDatabase(): Promise<Database> {
       updatedAt TEXT DEFAULT (datetime('now'))
     );
   `);
+
+  // Safe migration for isFree column
+  try {
+    db.run("ALTER TABLE events ADD COLUMN isFree INTEGER DEFAULT 0");
+  } catch {
+    // Column already exists
+  }
 
   db.run(`
     CREATE TABLE IF NOT EXISTS admin_users (

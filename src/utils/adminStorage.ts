@@ -85,9 +85,9 @@ function getBarsKey(year: number, month: number): string {
 export function loadMonthEvents(year: number, month: number): ScheduleEvent[] {
   try {
     const raw = localStorage.getItem(getEventsKey(year, month));
-    if (raw) {
+    if (raw !== null) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
@@ -104,6 +104,10 @@ export function loadMonthEvents(year: number, month: number): ScheduleEvent[] {
 export function saveMonthEvents(year: number, month: number, events: ScheduleEvent[]): void {
   try {
     localStorage.setItem(getEventsKey(year, month), JSON.stringify(events));
+    // Trigger global storage update event for live reactive sync
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('mmm_events_updated', { detail: { year, month, events } }));
+    }
   } catch (err) {
     console.error('Failed to save events to storage:', err);
   }

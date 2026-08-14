@@ -20,10 +20,13 @@ import {
   Tag,
   CheckCircle2,
   XCircle,
-  HelpCircle
+  HelpCircle,
+  Image as ImageIcon,
+  UploadCloud
 } from 'lucide-react';
 import { ScheduleEvent, OfferingCategory, BranchLocation } from '../../types';
 import { loadMonthEvents, saveMonthEvents, resetMonthEvents } from '../../utils/adminStorage';
+import { apiCreateEvent, apiUpdateEvent, apiDeleteEvent, apiFetchMonthEvents } from '../../utils/apiClient';
 import { TRANSLATIONS } from '../../utils/translations';
 import { FACILITATOR_BEEVER } from '../../data/scheduleData';
 
@@ -45,10 +48,12 @@ const DEFAULT_EVENT_FORM: Partial<ScheduleEvent> = {
   endTime: '10:30 AM',
   durationMinutes: 90,
   priceThb: 950,
+  isFree: false,
   capacity: 12,
   bookedCount: 0,
   level: 'All Levels',
   description: '',
+  posterUrl: '',
   benefits: ['คืนสมดุลให้ร่างกายและจิตใจ', 'ผ่อนคลายกล้ามเนื้อและระบบประสาท', 'คลายความตึงเครียดสะสม'],
   sensoryNotes: ['Tibetan Singing Bowls', 'Organic Herbal Tea', 'Essential Oil Mist'],
   preparationTips: ['สวมใส่ชุดหลวมสบาย ไม่รัดแน่น'],
@@ -73,12 +78,32 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<ScheduleEvent>>(DEFAULT_EVENT_FORM);
   const [formDayNum, setFormDayNum] = useState<number>(4);
+  const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Load events
+  // Load events from backend API or local storage
   useEffect(() => {
-    const loaded = loadMonthEvents(currentYear, currentMonth);
-    setEvents(loaded);
+    let isMounted = true;
+    
+    // First try backend API
+    apiFetchMonthEvents(currentYear, currentMonth).then((apiEvts) => {
+      if (!isMounted) return;
+      if (apiEvts && Array.isArray(apiEvts) && apiEvts.length > 0) {
+        setEvents(apiEvts);
+        saveMonthEvents(currentYear, currentMonth, apiEvts);
+      } else {
+        const loaded = loadMonthEvents(currentYear, currentMonth);
+        setEvents(loaded);
+      }
+    }).catch(() => {
+      if (!isMounted) return;
+      setEvents(loadMonthEvents(currentYear, currentMonth));
+    });
+
+    return () => {
+      isMounted = false;
+    };
   }, [currentYear, currentMonth]);
 
   const showToast = (msg: string) => {
@@ -86,12 +111,46 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  // Handle Photo Selection
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+      if (file.size > maxSize) {
+        alert('รูปภาพมีขนาดใหญ่เกิน 5MB กรุณาเลือกรูปภาพขนาดไม่เกิน 5MB');
+        return;
+      }
+
+      if (!allowedTypes.includes(file.type)) {
+        alert('รูปแบบไฟล์ไม่ถูกต้อง กรุณาใช้ไฟล์ JPG, PNG, GIF หรือ WEBP');
+        return;
+      }
+
+      setSelectedPhoto(file);
+      const previewUrl = URL.createObjectURL(file);
+      setPhotoPreview(previewUrl);
+      setFormData(prev => ({ ...prev, posterUrl: previewUrl }));
+    }
+  };
+
+  // Remove Photo
+  const handleRemovePhoto = () => {
+    setSelectedPhoto(null);
+    setPhotoPreview('');
+    setFormData(prev => ({ ...prev, posterUrl: '' }));
+  };
+
   // Open modal for NEW event
   const handleOpenCreateModal = (day = 1) => {
     setEditingEventId(null);
+    setSelectedPhoto(null);
+    setPhotoPreview('');
     setFormDayNum(day);
     setFormData({
       ...DEFAULT_EVENT_FORM,
+      isFree: false,
       dateStr: `${currentYear}-${monthStr}-${String(day).padStart(2, '0')}`,
       dateDisplay: `${String(day).padStart(2, '0')}.${monthStr}`
     });
@@ -101,14 +160,19 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
   // Open modal for EDIT event
   const handleOpenEditModal = (evt: ScheduleEvent) => {
     setEditingEventId(evt.id);
+    setSelectedPhoto(null);
+    setPhotoPreview(evt.posterUrl || '');
     const day = Number(evt.dateStr.split('-')[2]) || 1;
     setFormDayNum(day);
-    setFormData({ ...evt });
+    setFormData({ 
+      ...evt,
+      isFree: evt.isFree ?? (evt.priceThb === 0)
+    });
     setIsEditingModalOpen(true);
   };
 
   // Quick toggle Fully Booked from card
-  const handleQuickToggleFullyBooked = (evt: ScheduleEvent) => {
+  const handleQuickToggleFullyBooked = async (evt: ScheduleEvent) => {
     const isCurrentlyFull = evt.status === 'fully_booked' || evt.bookedCount >= evt.capacity;
     const newStatus = isCurrentlyFull ? 'available' : 'fully_booked';
     const newBookedCount = isCurrentlyFull ? Math.max(0, evt.capacity - 4) : evt.capacity;
@@ -127,11 +191,14 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     setEvents(updated);
     saveMonthEvents(currentYear, currentMonth, updated);
     onDataChanged();
+    
+    // Sync with backend API
+    apiUpdateEvent(evt.id, { status: newStatus, bookedCount: newBookedCount }).catch(() => {});
     showToast(isCurrentlyFull ? `ปลดล็อคที่นั่ง "${evt.name}" เป็นเปิดรับสมัครแล้ว` : `ปรับ "${evt.name}" เป็น Fully Booked (เต็มแล้ว)`);
   };
 
   // Quick update booked count (+ / -)
-  const handleQuickUpdateBookedCount = (evt: ScheduleEvent, delta: number) => {
+  const handleQuickUpdateBookedCount = async (evt: ScheduleEvent, delta: number) => {
     const newCount = Math.max(0, Math.min(evt.capacity, (evt.bookedCount || 0) + delta));
     const newStatus = newCount >= evt.capacity ? 'fully_booked' : newCount >= evt.capacity - 2 ? 'almost_full' : 'available';
 
@@ -149,10 +216,13 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     setEvents(updated);
     saveMonthEvents(currentYear, currentMonth, updated);
     onDataChanged();
+
+    // Sync with backend API
+    apiUpdateEvent(evt.id, { bookedCount: newCount, status: newStatus }).catch(() => {});
   };
 
   // Duplicate Event
-  const handleDuplicateEvent = (evt: ScheduleEvent) => {
+  const handleDuplicateEvent = async (evt: ScheduleEvent) => {
     const targetDay = Math.min(daysInMonth, (Number(evt.dateStr.split('-')[2]) || 1) + 1);
     const targetDayStr = String(targetDay).padStart(2, '0');
     const newEvent: ScheduleEvent = {
@@ -169,26 +239,45 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     setEvents(updated);
     saveMonthEvents(currentYear, currentMonth, updated);
     onDataChanged();
+    
+    // Sync with backend API
+    apiCreateEvent(newEvent).catch(() => {});
     showToast(`คัดลอกอีเวนท์ "${evt.name}" ไปยังวันที่ ${targetDayStr}.${monthStr} เรียบร้อยแล้ว`);
   };
 
-  // Delete Event
-  const handleDeleteEvent = (id: string, name: string) => {
-    if (!window.confirm(`ยืนยันการลบอีเวนท์ "${name}" ใช่หรือไม่?`)) return;
+  // Delete Event (Persisted to backend and localStorage)
+  const handleDeleteEvent = async (id: string, name: string) => {
+    if (!window.confirm(`ยืนยันการลบอีเวนท์ "${name}" ใช่หรือไม่? ข้อมูลจะถูกลบออกจากฐานข้อมูลอย่างถาวร`)) return;
+    
+    // 1. Call Backend API
+    try {
+      await apiDeleteEvent(id);
+    } catch (err) {
+      console.warn('Backend delete warning:', err);
+    }
+
+    // 2. Remove from state & local storage
     const updated = events.filter(e => e.id !== id);
     setEvents(updated);
     saveMonthEvents(currentYear, currentMonth, updated);
     onDataChanged();
-    showToast(`ลบอีเวนท์ "${name}" เรียบร้อยแล้ว`);
+    showToast(`ลบอีเวนท์ "${name}" ออกจากระบบถาวรเรียบร้อยแล้ว`);
   };
 
   // Reset Month Events
-  const handleResetMonth = (emptyOnly: boolean) => {
+  const handleResetMonth = async (emptyOnly: boolean) => {
     const confirmMsg = emptyOnly 
       ? `ต้องการล้างข้อมูลอีเวนท์ทั้งหมดในเดือน ${monthName} ${currentYear} ให้เป็นตารางว่าง (0 อีเวนท์) เพื่อเตรียมใส่ข้อมูลจริงใช่หรือไม่?`
       : `ต้องการรีเซ็ตอีเวนท์ในเดือน ${monthName} กลับเป็นข้อมูลตัวอย่างเริ่มต้นใช่หรือไม่?`;
     
     if (!window.confirm(confirmMsg)) return;
+
+    if (emptyOnly) {
+      // Delete events in current month from backend
+      events.forEach(e => {
+        apiDeleteEvent(e.id).catch(() => {});
+      });
+    }
 
     const resetResult = resetMonthEvents(currentYear, currentMonth, emptyOnly);
     setEvents(resetResult);
@@ -197,7 +286,7 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
   };
 
   // Save Event from Form
-  const handleSaveForm = (e: React.FormEvent) => {
+  const handleSaveForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name?.trim()) {
       alert('กรุณากรอกชื่อกิจกรรม');
@@ -212,6 +301,8 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     const bookedCount = Number(formData.bookedCount) || 0;
     const isFullyBooked = formData.status === 'fully_booked' || bookedCount >= capacity;
     const status = isFullyBooked ? 'fully_booked' : bookedCount >= capacity - 2 ? 'almost_full' : 'available';
+    const isFree = Boolean(formData.isFree || Number(formData.priceThb) === 0);
+    const priceThb = isFree ? 0 : (Number(formData.priceThb) || 0);
 
     const completeEvent: ScheduleEvent = {
       id: editingEventId || `evt-${Date.now()}`,
@@ -228,7 +319,8 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
       endTime: formData.endTime || '10:30 AM',
       durationMinutes: Number(formData.durationMinutes) || 90,
       facilitator: formData.facilitator || FACILITATOR_BEEVER,
-      priceThb: Number(formData.priceThb) || 0,
+      priceThb,
+      isFree,
       capacity,
       bookedCount: isFullyBooked && bookedCount < capacity ? capacity : bookedCount,
       level: formData.level || 'All Levels',
@@ -254,9 +346,25 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     if (editingEventId) {
       updated = events.map(e => e.id === editingEventId ? completeEvent : e);
       showToast(`อัปเดตอีเวนท์ "${completeEvent.name}" สำเร็จ!`);
+      apiUpdateEvent(editingEventId, completeEvent, selectedPhoto || undefined).then(res => {
+        if (res?.data?.posterUrl) {
+          completeEvent.posterUrl = res.data.posterUrl;
+          const refreshed = events.map(e => e.id === editingEventId ? completeEvent : e);
+          setEvents(refreshed);
+          saveMonthEvents(currentYear, currentMonth, refreshed);
+        }
+      }).catch(() => {});
     } else {
       updated = [completeEvent, ...events];
       showToast(`เพิ่มอีเวนท์ "${completeEvent.name}" เรียบร้อยแล้ว!`);
+      apiCreateEvent(completeEvent, selectedPhoto || undefined).then(res => {
+        if (res?.data?.posterUrl) {
+          completeEvent.posterUrl = res.data.posterUrl;
+          const refreshed = [completeEvent, ...events];
+          setEvents(refreshed);
+          saveMonthEvents(currentYear, currentMonth, refreshed);
+        }
+      }).catch(() => {});
     }
 
     // Sort by date
@@ -378,12 +486,28 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
                     isFull ? 'bg-[#FCF9F9]/80' : 'hover:bg-[#FAF8F5]'
                   }`}
                 >
-                  {/* Left: Date Badge & Details */}
+                  {/* Left: Photo / Date Badge & Details */}
                   <div className="flex items-start gap-3.5">
-                    <div className="w-14 h-14 rounded-2xl bg-[#FAF0F3] border border-[#F8DDE5] flex flex-col items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-bold text-[#E84D84] font-mono">{evt.dateDisplay}</span>
-                      <span className="text-[10px] text-[#888] font-mono">{evt.timeDisplay}</span>
-                    </div>
+                    {evt.posterUrl ? (
+                      <div className="relative w-14 h-14 rounded-2xl overflow-hidden border border-[#E5DFD7] flex-shrink-0 shadow-2xs group">
+                        <img 
+                          src={evt.posterUrl} 
+                          alt={evt.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end justify-center pb-0.5">
+                          <span className="text-[9px] font-bold text-white font-mono">{evt.dateDisplay}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-14 h-14 rounded-2xl bg-[#FAF0F3] border border-[#F8DDE5] flex flex-col items-center justify-center flex-shrink-0 shadow-2xs">
+                        <span className="text-xs font-bold text-[#E84D84] font-mono">{evt.dateDisplay}</span>
+                        <span className="text-[10px] text-[#888] font-mono">{evt.timeDisplay}</span>
+                      </div>
+                    )}
 
                     <div className="space-y-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -441,9 +565,15 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
                           <span>{evt.startTime} - {evt.endTime} ({evt.durationMinutes} นาที)</span>
                         </span>
                         <span>•</span>
-                        <span className="font-mono text-[#1E1E1E] font-semibold">
-                          ฿{evt.priceThb.toLocaleString()}
-                        </span>
+                        {evt.isFree || evt.priceThb === 0 ? (
+                          <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 text-[10px]">
+                            ฟรี (FREE)
+                          </span>
+                        ) : (
+                          <span className="font-mono text-[#1E1E1E] font-semibold">
+                            ฿{evt.priceThb.toLocaleString()}
+                          </span>
+                        )}
                         <span>•</span>
                         
                         {/* Booked Count Interactive Control */}
@@ -648,58 +778,82 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
               </div>
 
               {/* Row 4: Pricing, Capacity, Registered Count & Status */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-[#FAF8F5] rounded-2xl border border-[#EFE8E1]">
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#555] mb-1">ราคา (THB)</label>
-                  <input
-                    type="number"
-                    value={formData.priceThb ?? 950}
-                    onChange={(e) => setFormData({ ...formData, priceThb: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-white rounded-xl border border-[#E5DFD7] font-mono text-xs focus:outline-none focus:border-[#E84D84]"
-                  />
-                </div>
+              <div className="space-y-2 p-3 bg-[#FAF8F5] rounded-2xl border border-[#EFE8E1]">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[11px] font-semibold text-[#555]">ราคา (THB)</label>
+                      <label className="flex items-center gap-1 cursor-pointer text-[10px] font-bold text-emerald-700">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(formData.isFree || (formData.priceThb === 0 && formData.isFree !== false))}
+                          onChange={(e) => {
+                            const isChecked = e.target.checked;
+                            setFormData({
+                              ...formData,
+                              isFree: isChecked,
+                              priceThb: isChecked ? 0 : (formData.priceThb || 950)
+                            });
+                          }}
+                          className="w-3 h-3 accent-emerald-600 rounded"
+                        />
+                        <span>ฟรี (FREE)</span>
+                      </label>
+                    </div>
+                    <input
+                      type="number"
+                      disabled={Boolean(formData.isFree)}
+                      value={formData.isFree ? 0 : (formData.priceThb ?? 950)}
+                      onChange={(e) => setFormData({ ...formData, priceThb: Number(e.target.value) })}
+                      placeholder={formData.isFree ? 'ฟรี (0 THB)' : '950'}
+                      className={`w-full px-3 py-2 bg-white rounded-xl border border-[#E5DFD7] font-mono text-xs focus:outline-none focus:border-[#E84D84] ${
+                        formData.isFree ? 'bg-emerald-50/60 text-emerald-800 border-emerald-300 font-bold' : ''
+                      }`}
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#555] mb-1">จำนวนที่นั่งทั้งหมด (Max)</label>
-                  <input
-                    type="number"
-                    value={formData.capacity ?? 12}
-                    onChange={(e) => setFormData({ ...formData, capacity: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-white rounded-xl border border-[#E5DFD7] font-mono text-xs focus:outline-none focus:border-[#E84D84]"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#555] mb-1">จำนวนที่นั่งทั้งหมด (Max)</label>
+                    <input
+                      type="number"
+                      value={formData.capacity ?? 12}
+                      onChange={(e) => setFormData({ ...formData, capacity: Number(e.target.value) })}
+                      className="w-full px-3 py-2 bg-white rounded-xl border border-[#E5DFD7] font-mono text-xs focus:outline-none focus:border-[#E84D84]"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#555] mb-1">จำนวนผู้สมัครแล้ว (คน)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max={formData.capacity || 99}
-                    value={formData.bookedCount ?? 0}
-                    onChange={(e) => {
-                      const count = Number(e.target.value);
-                      const isFull = count >= (formData.capacity || 10);
-                      setFormData({ 
-                        ...formData, 
-                        bookedCount: count,
-                        status: isFull ? 'fully_booked' : formData.status === 'fully_booked' ? 'available' : formData.status
-                      });
-                    }}
-                    className="w-full px-3 py-2 bg-white rounded-xl border border-[#E5DFD7] font-mono text-xs focus:outline-none focus:border-[#E84D84]"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#555] mb-1">จำนวนผู้สมัครแล้ว (คน)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max={formData.capacity || 99}
+                      value={formData.bookedCount ?? 0}
+                      onChange={(e) => {
+                        const count = Number(e.target.value);
+                        const isFull = count >= (formData.capacity || 10);
+                        setFormData({ 
+                          ...formData, 
+                          bookedCount: count,
+                          status: isFull ? 'fully_booked' : formData.status === 'fully_booked' ? 'available' : formData.status
+                        });
+                      }}
+                      className="w-full px-3 py-2 bg-white rounded-xl border border-[#E5DFD7] font-mono text-xs focus:outline-none focus:border-[#E84D84]"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#555] mb-1">สถานะการเปิดรับ</label>
-                  <select
-                    value={formData.status || 'available'}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                    className="w-full px-3 py-2 bg-white rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
-                  >
-                    <option value="available">🟢 เปิดรับสมัคร (Available)</option>
-                    <option value="almost_full">🟡 ใกล้เต็ม (Almost Full)</option>
-                    <option value="fully_booked">🔴 เต็มแล้ว (Fully Booked)</option>
-                  </select>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#555] mb-1">สถานะการเปิดรับ</label>
+                    <select
+                      value={formData.status || 'available'}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                      className="w-full px-3 py-2 bg-white rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
+                    >
+                      <option value="available">🟢 เปิดรับสมัคร (Available)</option>
+                      <option value="almost_full">🟡 ใกล้เต็ม (Almost Full)</option>
+                      <option value="fully_booked">🔴 เต็มแล้ว (Fully Booked)</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -769,7 +923,58 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
                 />
               </div>
 
-              {/* Row 7: Description */}
+              {/* Row 7: Event Photo Upload (Optional) */}
+              <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#EFE8E1] space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[11px] font-semibold text-[#555] flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-[#E84D84]" />
+                    <span>รูปภาพโปสเตอร์กิจกรรม (Event Photo - Optional)</span>
+                  </label>
+                  <span className="text-[10px] text-[#888]">รองรับ JPG, PNG, GIF, WEBP (สูงสุด 5MB)</span>
+                </div>
+
+                {/* Photo Preview if Selected or Available */}
+                {photoPreview ? (
+                  <div className="flex items-center gap-3 p-2 bg-white rounded-xl border border-[#E5DFD7]">
+                    <img 
+                      src={photoPreview} 
+                      alt="Event Preview" 
+                      className="w-16 h-16 rounded-lg object-cover border border-[#EFE8E1] flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-[#1E1E1E] truncate">
+                        {selectedPhoto ? selectedPhoto.name : 'รูปภาพปัจจุบันของกิจกรรม'}
+                      </p>
+                      <p className="text-[10px] text-[#888]">
+                        {selectedPhoto ? `${(selectedPhoto.size / 1024).toFixed(1)} KB` : 'บันทึกอยู่ในระบบแล้ว'}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleRemovePhoto}
+                        className="mt-1 text-[11px] font-semibold text-rose-600 hover:text-rose-700 flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>ลบรูปภาพ (Remove Photo)</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <label className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white hover:bg-[#FAF0F3] border border-dashed border-[#D5CEC7] hover:border-[#E84D84] rounded-xl cursor-pointer transition-colors text-xs text-[#666]">
+                      <UploadCloud className="w-4 h-4 text-[#E84D84]" />
+                      <span className="font-semibold text-[#1E1E1E]">เลือกไฟล์รูปภาพ (Choose Photo)</span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif,image/webp"
+                        onChange={handlePhotoSelect}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* Row 8: Description */}
               <div>
                 <label className="block text-[11px] font-semibold text-[#555] mb-1">รายละเอียดคลาส (Description)</label>
                 <textarea
@@ -781,7 +986,7 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
                 />
               </div>
 
-              {/* Row 8: Special Star Highlight Toggle */}
+              {/* Row 9: Special Star Highlight Toggle */}
               <div className="flex items-center justify-between p-3 rounded-2xl bg-[#FFF9EA] border border-[#FDE6B0]">
                 <div>
                   <span className="font-bold text-xs text-[#996500] block flex items-center gap-1">

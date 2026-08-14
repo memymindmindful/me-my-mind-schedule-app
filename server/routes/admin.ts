@@ -135,7 +135,8 @@ adminRouter.post('/admin/events', authenticateToken, upload.single('photo'), (re
     const capacity = parseInt(body.capacity, 10) || 10;
     const bookedCount = parseInt(body.bookedCount, 10) || 0;
     const status = body.status || 'available';
-    const priceThb = parseInt(body.priceThb, 10) || 0;
+    const isFree = body.isFree === 'true' || body.isFree === true || body.isFree === 1 || Number(body.priceThb) === 0 ? 1 : 0;
+    const priceThb = isFree ? 0 : (parseInt(body.priceThb, 10) || 0);
     const level = body.level || 'All Levels';
     const description = body.description || '';
     const locationDetails = body.locationDetails || '';
@@ -160,16 +161,16 @@ adminRouter.post('/admin/events', authenticateToken, upload.single('photo'), (re
       INSERT INTO events (
         id, name, englishName, date, dateDisplay, dateStr,
         startTime, endTime, timeDisplay, durationMinutes, category,
-        branch, capacity, bookedCount, status, priceThb, level,
+        branch, capacity, bookedCount, status, priceThb, isFree, level,
         description, locationDetails, posterUrl, posterTag, subtitle,
         facilitatorName, facilitatorRole, facilitatorBio,
         sensoryNotes, benefits, preparationTips, adminNote,
         isSpecialStar, isFeatured, createdAt, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     `, [
       id, name, englishName, date, dateDisplay, dateStr,
       startTime, endTime, timeDisplay, durationMinutes, category,
-      branch, capacity, bookedCount, status, priceThb, level,
+      branch, capacity, bookedCount, status, priceThb, isFree, level,
       description, locationDetails, posterUrl, posterTag, subtitle,
       facilitatorName, facilitatorRole, facilitatorBio,
       sensoryNotes, benefits, preparationTips, adminNote,
@@ -215,7 +216,12 @@ adminRouter.put('/admin/events/:id', authenticateToken, upload.single('photo'), 
     }
 
     const currentPosterUrl = check[0].values[0][1];
-    const posterUrl = file ? `/uploads/${file.filename}` : (body.posterUrl || currentPosterUrl);
+    let posterUrl = currentPosterUrl;
+    if (file) {
+      posterUrl = `/uploads/${file.filename}`;
+    } else if (body.posterUrl !== undefined) {
+      posterUrl = body.posterUrl;
+    }
 
     db.run(`
       UPDATE events SET
@@ -234,6 +240,7 @@ adminRouter.put('/admin/events/:id', authenticateToken, upload.single('photo'), 
         bookedCount = COALESCE(?, bookedCount),
         status = COALESCE(?, status),
         priceThb = COALESCE(?, priceThb),
+        isFree = COALESCE(?, isFree),
         level = COALESCE(?, level),
         description = COALESCE(?, description),
         locationDetails = COALESCE(?, locationDetails),
@@ -260,7 +267,8 @@ adminRouter.put('/admin/events/:id', authenticateToken, upload.single('photo'), 
       body.capacity ? parseInt(body.capacity, 10) : null,
       body.bookedCount ? parseInt(body.bookedCount, 10) : null,
       body.status,
-      body.priceThb ? parseInt(body.priceThb, 10) : null,
+      body.priceThb !== undefined ? parseInt(body.priceThb, 10) : null,
+      body.isFree !== undefined ? (body.isFree === 'true' || body.isFree === true || body.isFree === 1 || Number(body.priceThb) === 0 ? 1 : 0) : null,
       body.level,
       body.description,
       body.locationDetails,

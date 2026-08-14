@@ -124,14 +124,28 @@ export default function App() {
     };
   }, [currentYear, currentMonth]);
 
-  // Listen to storage events to sync changes if multiple tabs open
+  // Listen to storage and custom events to sync changes live
   useEffect(() => {
     const handleStorage = () => {
       setEvents(loadMonthEvents(currentYear, currentMonth));
       setMonthBars(loadMonthBars(currentYear, currentMonth));
     };
+
+    const handleCustomUpdate = (evt: any) => {
+      if (evt.detail?.year === currentYear && evt.detail?.month === currentMonth && Array.isArray(evt.detail?.events)) {
+        setEvents(evt.detail.events);
+      } else {
+        setEvents(loadMonthEvents(currentYear, currentMonth));
+      }
+      setMonthBars(loadMonthBars(currentYear, currentMonth));
+    };
+
     window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+    window.addEventListener('mmm_events_updated', handleCustomUpdate);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('mmm_events_updated', handleCustomUpdate);
+    };
   }, [currentYear, currentMonth]);
 
   // Month navigation
@@ -196,6 +210,15 @@ export default function App() {
   // Handle branch pill toggle
   const handleToggleBranchFilter = (branch: BranchLocation) => {
     setSelectedBranch((prev) => (prev === branch ? 'All' : branch));
+  };
+
+  // Handle Reset filter to Nakhonsawan only (default state without deleting data)
+  const handleResetToNakhonsawan = () => {
+    setSelectedBranch('Nakhonsawan');
+    setSelectedDateStr(null);
+    setSearchQuery('');
+    setToastMessage(lang === 'th' ? '↺ รีเซ็ต: แสดงเฉพาะสาขานครสวรรค์' : '↺ Reset: Showing Nakhonsawan branch only');
+    setTimeout(() => setToastMessage(null), 2500);
   };
 
   // Handle date selection
@@ -273,6 +296,7 @@ export default function App() {
                 onNextMonth={handleNextMonth}
                 selectedBranch={selectedBranch}
                 onToggleBranchFilter={handleToggleBranchFilter}
+                onResetToNakhonsawan={handleResetToNakhonsawan}
                 selectedDateStr={selectedDateStr}
                 onSelectDate={handleSelectDate}
                 onOpenEventDetail={(evt) => setActiveEventModal(evt)}

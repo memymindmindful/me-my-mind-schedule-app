@@ -34,13 +34,16 @@ Thank you 🙏`;
 }
 
 /**
- * Generate LINE pre-filled message for Button 2: Event-Specific BOOK NOW (inside Event Modal)
+ * Generate LINE pre-filled message for Event-Specific BOOK NOW (with user details)
  */
 export function getEventBookingMessage(
   lang: Language,
   event: ScheduleEvent,
   guestsCount: number = 1,
-  specialNotes?: string
+  specialNotes?: string,
+  clientName?: string,
+  clientPhone?: string,
+  clientLineId?: string
 ): string {
   const branchData = BRANCH_INFO[event.branch];
   const branchName = lang === 'th' ? branchData?.nameTh || event.branch : branchData?.name || event.branch;
@@ -79,41 +82,40 @@ export function getEventBookingMessage(
 
   const notesTextTh = specialNotes?.trim() ? specialNotes.trim() : '-';
   const notesTextEn = specialNotes?.trim() ? specialNotes.trim() : '-';
-  const priceFormatted = event.priceThb.toLocaleString();
+  const isFree = Boolean(event.isFree || event.priceThb === 0);
+  const priceDisplayTh = isFree ? 'ฟรี (ไม่มีค่าใช้จ่าย / FREE)' : `฿${event.priceThb.toLocaleString()} THB`;
+  const priceDisplayEn = isFree ? 'Free (No charge)' : `฿${event.priceThb.toLocaleString()} THB`;
+
+  const nameTh = clientName?.trim() ? clientName.trim() : '-';
+  const nameEn = clientName?.trim() ? clientName.trim() : '-';
+  const phoneTh = clientPhone?.trim() ? clientPhone.trim() : '-';
+  const phoneEn = clientPhone?.trim() ? clientPhone.trim() : '-';
+  const lineIdTh = clientLineId?.trim() ? clientLineId.trim() : '-';
+  const lineIdEn = clientLineId?.trim() ? clientLineId.trim() : '-';
 
   if (lang === 'th') {
-    return `สวัสดีครับ/ค่ะ Kru Beever 🙏
+    let msg = `สวัสดีครับ/ค่ะ Kru Beever 🙏\n\nฉันอยากจองคลาสต่อไปนี้:\n\n✨ ${eventName}\n📅 ${dateFormattedTh} (${dayOfWeekTh})\n⏰ ${event.startTime} - ${event.endTime}\n💰 ${priceDisplayTh}\n📍 ${event.locationDetails || branchName}\n👥 Available: ${event.bookedCount}/${event.capacity}\n\n`;
+    
+    if (clientName?.trim() || clientPhone?.trim()) {
+      msg += `👤 ชื่อผู้จอง: ${nameTh}\n📱 เบอร์โทรศัพท์: ${phoneTh}\n💬 LINE ID: ${lineIdTh}\n👥 จำนวนคน: ${guestsCount} คน\n📝 หมายเหตุ: ${notesTextTh}\n\n`;
+    } else {
+      msg += `👥 อยากจองให้ฉัน ${guestsCount} คน\n📝 หมายเหตุ: ${notesTextTh}\n\n`;
+    }
 
-ฉันอยากจองคลาสต่อไปนี้:
-
-✨ ${eventName}
-📅 ${dateFormattedTh} (${dayOfWeekTh})
-⏰ ${event.startTime} - ${event.endTime}
-💰 ฿${priceFormatted} THB
-📍 ${event.locationDetails || branchName}
-👥 Available: ${event.bookedCount}/${event.capacity}
-
-อยากจองให้ฉัน ${guestsCount} คน
-หมายเหตุ: ${notesTextTh}
-
-ช่วยยืนยันการจองให้ฉันได้ไหมครับ/ค่ะ 🙏`;
+    msg += `ช่วยยืนยันการจองให้ฉันได้ไหมครับ/ค่ะ 🙏`;
+    return msg;
   }
 
-  return `Hello Kru Beever 🙏
+  let msg = `Hello Kru Beever 🙏\n\nI'd like to book the following class:\n\n✨ ${eventName}\n📅 ${dateFormattedEn} (${dayOfWeekEn})\n⏰ ${event.startTime} - ${event.endTime}\n💰 ${priceDisplayEn}\n📍 ${event.locationDetails || branchName}\n👥 Available: ${event.bookedCount}/${event.capacity}\n\n`;
 
-I'd like to book the following class:
+  if (clientName?.trim() || clientPhone?.trim()) {
+    msg += `👤 Name: ${nameEn}\n📱 Phone: ${phoneEn}\n💬 LINE ID: ${lineIdEn}\n👥 Guests: ${guestsCount} people\n📝 Special notes: ${notesTextEn}\n\n`;
+  } else {
+    msg += `👥 I'd like to book for ${guestsCount} people\n📝 Special notes: ${notesTextEn}\n\n`;
+  }
 
-✨ ${eventName}
-📅 ${dateFormattedEn} (${dayOfWeekEn})
-⏰ ${event.startTime} - ${event.endTime}
-💰 ฿${priceFormatted} THB
-📍 ${event.locationDetails || branchName}
-👥 Available: ${event.bookedCount}/${event.capacity}
-
-I'd like to book for ${guestsCount} people
-Special notes: ${notesTextEn}
-
-Can you please confirm my booking? 🙏`;
+  msg += `Can you please confirm my booking? 🙏`;
+  return msg;
 }
 
 /**
