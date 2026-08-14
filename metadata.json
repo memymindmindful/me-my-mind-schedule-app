@@ -1,0 +1,6 @@
+{
+  "name": "Me.My.Mind Mindfulness Schedule",
+  "description": "Client-facing mindfulness and wellness schedule for Me.My.Mind Studio across Nakhonsawan, Ratchathewi, and Tour offerings.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
