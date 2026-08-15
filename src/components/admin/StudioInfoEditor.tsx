@@ -135,7 +135,7 @@ export const StudioInfoEditor: React.FC<StudioInfoEditorProps> = ({ initialData,
               rows={2}
               value={formData.taglineTh}
               onChange={e => setFormData(prev => ({ ...prev, taglineTh: e.target.value }))}
-              placeholder="สตูดิโอศาสตร์แห่งเสียง คลื่นความถี่ การบำบัดกล้ามเนื้อใบหน้า และความสงบใจ"
+              placeholder="Your Daily Rituals of Self-Love"
               className="w-full px-3.5 py-2 rounded-xl border border-[#DDD5CC] text-xs focus:outline-none focus:border-[#E84D84] bg-[#FAF8F5] resize-none"
             />
           </div>
@@ -147,7 +147,7 @@ export const StudioInfoEditor: React.FC<StudioInfoEditorProps> = ({ initialData,
               rows={2}
               value={formData.taglineEn}
               onChange={e => setFormData(prev => ({ ...prev, taglineEn: e.target.value }))}
-              placeholder="Somatic sound baths, facial acupressure rituals, and restorative wellness journeys."
+              placeholder="Your Daily Rituals of Self-Love"
               className="w-full px-3.5 py-2 rounded-xl border border-[#DDD5CC] text-xs focus:outline-none focus:border-[#E84D84] bg-[#FAF8F5] resize-none"
             />
           </div>

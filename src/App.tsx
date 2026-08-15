@@ -1,12 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  ScheduleEvent, 
-  BranchLocation, 
-  BookingSubmission,
-  DayCalendarInfo
-} from './types';
-import { loadMonthEvents, loadMonthBars, getStoredBranchFilter, saveStoredBranchFilter } from './utils/adminStorage';
-import { apiFetchMonthEvents } from './utils/apiClient';
+import { ScheduleEvent, BranchLocation, BookingSubmission, DayCalendarInfo, AllStudioSettings } from './types';
+import { loadMonthEvents, loadMonthBars, getStoredBranchFilter, saveStoredBranchFilter, loadStudioSettingsLocal } from './utils/adminStorage';
+import { apiFetchMonthEvents, apiFetchStudioSettings } from './utils/apiClient';
 import { CalendarHeader } from './components/CalendarHeader';
 import { CalendarMonthView } from './components/CalendarMonthView';
 import { DontMissSection } from './components/DontMissSection';
@@ -93,6 +88,36 @@ export default function App() {
 
   // Toast feedback state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Studio settings state (Branding, sayHiMessage, etc.)
+  const [studioSettings, setStudioSettings] = useState<AllStudioSettings>(() => loadStudioSettingsLocal());
+
+  // Load Studio Settings from backend API or local storage
+  useEffect(() => {
+    let isMounted = true;
+    apiFetchStudioSettings().then((apiSettings) => {
+      if (!isMounted) return;
+      if (apiSettings && apiSettings.studio) {
+        setStudioSettings(apiSettings);
+      }
+    }).catch(() => {
+      // local fallback already loaded
+    });
+
+    const handleSettingsUpdated = (evt: any) => {
+      if (evt.detail) {
+        setStudioSettings(evt.detail);
+      } else {
+        setStudioSettings(loadStudioSettingsLocal());
+      }
+    };
+
+    window.addEventListener('mmm_settings_updated', handleSettingsUpdated);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('mmm_settings_updated', handleSettingsUpdated);
+    };
+  }, []);
 
   // Dynamic monthly schedule data loaded from custom storage
   const [events, setEvents] = useState<ScheduleEvent[]>(() => 
