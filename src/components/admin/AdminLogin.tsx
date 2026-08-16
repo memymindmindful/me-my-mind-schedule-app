@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, Sparkles, Key, AlertCircle, ArrowLeft, User, Eye, EyeOff } from 'lucide-react';
-import { validateAdminLogin, getAdminCredentials } from '../../utils/adminStorage';
+import { setAdminAuth } from '../../utils/adminStorage';
 import { apiAdminLogin } from '../../utils/apiClient';
 
 interface AdminLoginProps {
@@ -23,21 +23,20 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onBackToClien
     const targetUser = username.trim() || 'admin';
     const targetPass = passcode.trim();
 
-    // 1. Try backend API login first
-    const apiResult = await apiAdminLogin(targetUser, targetPass);
-    if (apiResult) {
-      setIsLoading(false);
-      onSuccess();
-      return;
-    }
-
-    // 2. Fallback to client validation
-    const isValid = validateAdminLogin(targetUser, targetPass);
-    if (isValid) {
-      setIsLoading(false);
-      onSuccess();
-    } else {
+    try {
+      // Backend API login with SQLite authentication
+      const apiResult = await apiAdminLogin(targetUser, targetPass);
+      if (apiResult && apiResult.token) {
+        setAdminAuth(true);
+        setIsLoading(false);
+        onSuccess();
+        return;
+      }
+      
       setError('ชื่อผู้ใช้ (Username) หรือ รหัสผ่าน (Password) ไม่ถูกต้อง');
+      setIsLoading(false);
+    } catch (err) {
+      setError('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาลองใหม่อีกครั้ง');
       setIsLoading(false);
     }
   };

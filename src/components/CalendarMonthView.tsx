@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { BranchLocation, ScheduleEvent, DayCalendarInfo, DayBarConfig } from '../types';
-import { loadMonthBars } from '../utils/adminStorage';
+import { getDefaultMonthBars } from '../utils/adminStorage';
 import { Language, TRANSLATIONS } from '../utils/translations';
 
 interface CalendarMonthViewProps {
@@ -15,6 +15,7 @@ interface CalendarMonthViewProps {
   onSelectDate: (dateStr: string, events: ScheduleEvent[], dayInfo?: DayCalendarInfo) => void;
   onOpenEventDetail: (event: ScheduleEvent) => void;
   allEvents: ScheduleEvent[];
+  monthBarsMap?: Record<number, DayBarConfig>;
   lang: Language;
 }
 
@@ -29,6 +30,7 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
   onSelectDate,
   onOpenEventDetail,
   allEvents,
+  monthBarsMap: incomingMonthBars,
   lang
 }) => {
   const t = TRANSLATIONS[lang];
@@ -38,10 +40,13 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
   const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay(); // 0 = Sunday
 
-  // Dynamic Bar Tabs from Admin Storage
+  // Dynamic Bar Tabs from API or initial defaults
   const monthBarsMap: Record<number, DayBarConfig> = useMemo(() => {
-    return loadMonthBars(currentYear, currentMonth);
-  }, [currentYear, currentMonth]);
+    if (incomingMonthBars && Object.keys(incomingMonthBars).length > 0) {
+      return incomingMonthBars;
+    }
+    return getDefaultMonthBars(currentYear, currentMonth);
+  }, [incomingMonthBars, currentYear, currentMonth]);
 
   // Weekday abbreviations based on language
   const weekdays = t.weekdays;

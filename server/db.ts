@@ -198,6 +198,34 @@ export async function initDatabase(): Promise<Database> {
     );
   `);
 
+  // Calendar Day Bars & Pill / Special Status configs
+  db.run(`
+    CREATE TABLE IF NOT EXISTS month_bars (
+      id TEXT PRIMARY KEY,
+      year INTEGER NOT NULL,
+      month INTEGER NOT NULL,
+      dayNum INTEGER NOT NULL,
+      branch TEXT NOT NULL DEFAULT 'Nakhonsawan',
+      tourCity TEXT,
+      isPinkPill INTEGER DEFAULT 0,
+      isBrownPill INTEGER DEFAULT 0,
+      pillPosition TEXT,
+      hasSpecialStar INTEGER DEFAULT 0,
+      specialStatusType TEXT,
+      specialStatusLabelTh TEXT,
+      specialStatusLabelEn TEXT,
+      specialStatusSubTh TEXT,
+      specialStatusSubEn TEXT,
+      specialStatusBadgeBg TEXT,
+      specialStatusBadgeText TEXT,
+      updatedAt TEXT DEFAULT (datetime('now'))
+    );
+  `);
+
+  try {
+    db.run("CREATE INDEX IF NOT EXISTS idx_month_bars_ym ON month_bars(year, month)");
+  } catch {}
+
   // Contact Info
   db.run(`
     CREATE TABLE IF NOT EXISTS contact_info (

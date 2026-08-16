@@ -17,11 +17,7 @@ import {
   ServiceItem, 
   ContactInfo 
 } from '../../types';
-import { 
-  loadStudioSettingsLocal, 
-  saveStudioSettingsLocal, 
-  DEFAULT_STUDIO_SETTINGS 
-} from '../../utils/adminStorage';
+import { DEFAULT_STUDIO_SETTINGS } from '../../utils/adminStorage';
 import { 
   apiFetchStudioSettings, 
   apiSaveStudioSettings, 
@@ -39,7 +35,7 @@ import { ContactInfoEditor } from './ContactInfoEditor';
 
 export const AdminSettingsPage: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'studio' | 'facilitator' | 'branches' | 'services' | 'contact'>('studio');
-  const [settings, setSettings] = useState<AllStudioSettings>(() => loadStudioSettingsLocal());
+  const [settings, setSettings] = useState<AllStudioSettings>(DEFAULT_STUDIO_SETTINGS);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -60,10 +56,9 @@ export const AdminSettingsPage: React.FC = () => {
             contact: remote.contact || DEFAULT_STUDIO_SETTINGS.contact
           };
           setSettings(merged);
-          saveStudioSettingsLocal(merged);
         }
       } catch (err) {
-        console.warn('Using local settings data:', err);
+        console.warn('API fetch studio settings error:', err);
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -89,14 +84,13 @@ export const AdminSettingsPage: React.FC = () => {
         studio: { ...data, logoUrl: updatedLogo }
       };
       setSettings(updated);
-      saveStudioSettingsLocal(updated);
+      window.dispatchEvent(new CustomEvent('mmm_settings_updated', { detail: updated }));
       showToast('บันทึกข้อมูลสตูดิโอเรียบร้อยแล้ว');
     } catch (err) {
       console.error(err);
       const updated: AllStudioSettings = { ...settings, studio: data };
       setSettings(updated);
-      saveStudioSettingsLocal(updated);
-      showToast('บันทึกข้อมูลในเครื่องเรียบร้อยแล้ว');
+      showToast('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
     } finally {
       setIsSaving(false);
     }
@@ -113,14 +107,13 @@ export const AdminSettingsPage: React.FC = () => {
         facilitator: { ...data, photoUrl: updatedPhoto }
       };
       setSettings(updated);
-      saveStudioSettingsLocal(updated);
+      window.dispatchEvent(new CustomEvent('mmm_settings_updated', { detail: updated }));
       showToast('บันทึกข้อมูลครูผู้บำบัดเรียบร้อยแล้ว');
     } catch (err) {
       console.error(err);
       const updated: AllStudioSettings = { ...settings, facilitator: data };
       setSettings(updated);
-      saveStudioSettingsLocal(updated);
-      showToast('บันทึกข้อมูลในเครื่องเรียบร้อยแล้ว');
+      showToast('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
     } finally {
       setIsSaving(false);
     }
@@ -144,7 +137,7 @@ export const AdminSettingsPage: React.FC = () => {
 
       const updated: AllStudioSettings = { ...settings, branches: updatedBranches };
       setSettings(updated);
-      saveStudioSettingsLocal(updated);
+      window.dispatchEvent(new CustomEvent('mmm_settings_updated', { detail: updated }));
       showToast('บันทึกสาขาเรียบร้อยแล้ว');
     } catch (err) {
       console.error(err);
@@ -154,7 +147,6 @@ export const AdminSettingsPage: React.FC = () => {
         : [...settings.branches, branch];
       const updated: AllStudioSettings = { ...settings, branches: updatedBranches };
       setSettings(updated);
-      saveStudioSettingsLocal(updated);
       showToast('บันทึกสาขาเรียบร้อยแล้ว');
     } finally {
       setIsSaving(false);
@@ -172,7 +164,7 @@ export const AdminSettingsPage: React.FC = () => {
     const updatedBranches = settings.branches.filter(b => b.id !== id);
     const updated: AllStudioSettings = { ...settings, branches: updatedBranches };
     setSettings(updated);
-    saveStudioSettingsLocal(updated);
+    window.dispatchEvent(new CustomEvent('mmm_settings_updated', { detail: updated }));
     setIsSaving(false);
     showToast('ลบสาขาเรียบร้อยแล้ว');
   };
@@ -195,7 +187,7 @@ export const AdminSettingsPage: React.FC = () => {
 
       const updated: AllStudioSettings = { ...settings, services: updatedServices };
       setSettings(updated);
-      saveStudioSettingsLocal(updated);
+      window.dispatchEvent(new CustomEvent('mmm_settings_updated', { detail: updated }));
       showToast('บันทึกบริการเรียบร้อยแล้ว');
     } catch (err) {
       console.error(err);
@@ -205,7 +197,6 @@ export const AdminSettingsPage: React.FC = () => {
         : [...settings.services, service];
       const updated: AllStudioSettings = { ...settings, services: updatedServices };
       setSettings(updated);
-      saveStudioSettingsLocal(updated);
       showToast('บันทึกบริการเรียบร้อยแล้ว');
     } finally {
       setIsSaving(false);
@@ -223,7 +214,7 @@ export const AdminSettingsPage: React.FC = () => {
     const updatedServices = settings.services.filter(s => s.id !== id);
     const updated: AllStudioSettings = { ...settings, services: updatedServices };
     setSettings(updated);
-    saveStudioSettingsLocal(updated);
+    window.dispatchEvent(new CustomEvent('mmm_settings_updated', { detail: updated }));
     setIsSaving(false);
     showToast('ลบบริการเรียบร้อยแล้ว');
   };
@@ -235,14 +226,13 @@ export const AdminSettingsPage: React.FC = () => {
       await apiSaveStudioSettings({ ...data, isContactOnly: true });
       const updated: AllStudioSettings = { ...settings, contact: data };
       setSettings(updated);
-      saveStudioSettingsLocal(updated);
+      window.dispatchEvent(new CustomEvent('mmm_settings_updated', { detail: updated }));
       showToast('บันทึกช่องทางติดต่อเรียบร้อยแล้ว');
     } catch (err) {
       console.error(err);
       const updated: AllStudioSettings = { ...settings, contact: data };
       setSettings(updated);
-      saveStudioSettingsLocal(updated);
-      showToast('บันทึกข้อมูลในเครื่องเรียบร้อยแล้ว');
+      showToast('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
     } finally {
       setIsSaving(false);
     }

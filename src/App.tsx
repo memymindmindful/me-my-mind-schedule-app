@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { ScheduleEvent, BranchLocation, BookingSubmission, DayCalendarInfo, AllStudioSettings } from './types';
-import { loadMonthEvents, loadMonthBars, getStoredBranchFilter, saveStoredBranchFilter, loadStudioSettingsLocal } from './utils/adminStorage';
-import { apiFetchMonthEvents, apiFetchStudioSettings } from './utils/apiClient';
+import { ScheduleEvent, BranchLocation, BookingSubmission, DayCalendarInfo, AllStudioSettings, DayBarConfig } from './types';
+import { getStoredBranchFilter, saveStoredBranchFilter, DEFAULT_STUDIO_SETTINGS, getDefaultMonthBars } from './utils/adminStorage';
+import { apiFetchMonthEvents, apiFetchMonthBars, apiFetchStudioSettings } from './utils/apiClient';
 import { CalendarHeader } from './components/CalendarHeader';
 import { CalendarMonthView } from './components/CalendarMonthView';
 import { DontMissSection } from './components/DontMissSection';
@@ -70,7 +70,6 @@ export default function App() {
   // Filter state for branch tabs (defaults to stored branch filter or 'All')
   const [selectedBranch, setSelectedBranch] = useState<BranchLocation | 'All'>(() => getStoredBranchFilter());
 
-
   // Search filter query
   const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -90,9 +89,9 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Studio settings state (Branding, sayHiMessage, etc.)
-  const [studioSettings, setStudioSettings] = useState<AllStudioSettings>(() => loadStudioSettingsLocal());
+  const [studioSettings, setStudioSettings] = useState<AllStudioSettings>(DEFAULT_STUDIO_SETTINGS);
 
-  // Load Studio Settings from backend API or local storage
+  // Load Studio Settings from backend API
   useEffect(() => {
     let isMounted = true;
     apiFetchStudioSettings().then((apiSettings) => {
@@ -100,15 +99,13 @@ export default function App() {
       if (apiSettings && apiSettings.studio) {
         setStudioSettings(apiSettings);
       }
-    }).catch(() => {
-      // local fallback already loaded
+    }).catch((err) => {
+      console.warn('Using default settings fallback:', err);
     });
 
     const handleSettingsUpdated = (evt: any) => {
       if (evt.detail) {
         setStudioSettings(evt.detail);
-      } else {
-        setStudioSettings(loadStudioSettingsLocal());
       }
     };
 
@@ -119,33 +116,44 @@ export default function App() {
     };
   }, []);
 
-  // Dynamic monthly schedule data loaded from custom storage
-  const [events, setEvents] = useState<ScheduleEvent[]>(() => 
-    loadMonthEvents(new Date().getFullYear(), new Date().getMonth())
-  );
-  
-  const [monthBars, setMonthBars] = useState<Record<string, DayCalendarInfo>>(() => 
-    loadMonthBars(new Date().getFullYear(), new Date().getMonth())
+  // Dynamic monthly schedule data loaded exclusively from Database/API
+  const [events, setEvents] = useState<ScheduleEvent[]>([]);
+  const [monthBars, setMonthBars] = useState<Record<number, DayBarConfig>>(() => 
+    getDefaultMonthBars(new Date().getFullYear(), new Date().getMonth())
   );
 
-  // Reload data whenever current month or year changes
+  // Reload data from API whenever current month or year changes
   useEffect(() => {
     let isMounted = true;
-    const loadedBars = loadMonthBars(currentYear, currentMonth);
-    setMonthBars(loadedBars);
 
-    // Try backend API first, then local storage fallback
+    // 1. Fetch Month Events from Database API
     apiFetchMonthEvents(currentYear, currentMonth).then((apiEvents) => {
       if (!isMounted) return;
-      if (apiEvents && apiEvents.length > 0) {
+      if (apiEvents !== null) {
+        // Successful response (including empty array [] when month has no events)
         setEvents(apiEvents);
       } else {
-        const localEvents = loadMonthEvents(currentYear, currentMonth);
-        setEvents(localEvents);
+        console.warn('Could not load events from server. Displaying empty schedule.');
+        setEvents([]);
       }
-    }).catch(() => {
+    }).catch((err) => {
       if (!isMounted) return;
-      setEvents(loadMonthEvents(currentYear, currentMonth));
+      console.error('Failed to fetch events from server:', err);
+      setEvents([]);
+    });
+
+    // 2. Fetch Month Day Bars / Pills from Database API
+    apiFetchMonthBars(currentYear, currentMonth).then((apiBars) => {
+      if (!isMounted) return;
+      if (apiBars !== null && Object.keys(apiBars).length > 0) {
+        setMonthBars(apiBars);
+      } else {
+        setMonthBars(getDefaultMonthBars(currentYear, currentMonth));
+      }
+    }).catch((err) => {
+      if (!isMounted) return;
+      console.warn('Using default month bars layout:', err);
+      setMonthBars(getDefaultMonthBars(currentYear, currentMonth));
     });
 
     return () => {
@@ -153,20 +161,26 @@ export default function App() {
     };
   }, [currentYear, currentMonth]);
 
-  // Listen to storage and custom events to sync changes live
+  // Listen to live events dispatched during admin operations in same session
   useEffect(() => {
-    const handleStorage = () => {
-      setEvents(loadMonthEvents(currentYear, currentMonth));
-      setMonthBars(loadMonthBars(currentYear, currentMonth));
-    };
-
     const handleCustomUpdate = (evt: any) => {
       if (evt.detail?.year === currentYear && evt.detail?.month === currentMonth && Array.isArray(evt.detail?.events)) {
         setEvents(evt.detail.events);
       } else {
-        setEvents(loadMonthEvents(currentYear, currentMonth));
+        apiFetchMonthEvents(currentYear, currentMonth).then((evts) => {
+          if (evts !== null) setEvents(evts);
+        });
       }
-      setMonthBars(loadMonthBars(currentYear, currentMonth));
+    };
+
+    const handleBarsUpdate = (evt: any) => {
+      if (evt.detail?.year === currentYear && evt.detail?.month === currentMonth && evt.detail?.bars) {
+        setMonthBars(evt.detail.bars);
+      } else {
+        apiFetchMonthBars(currentYear, currentMonth).then((bars) => {
+          if (bars !== null) setMonthBars(bars);
+        });
+      }
     };
 
     const handleStartFreshReset = (evt: any) => {
@@ -177,15 +191,15 @@ export default function App() {
       setSelectedDateStr(null);
       setActiveEventModal(null);
       setEvents([]);
-      setMonthBars(loadMonthBars(currentYear, currentMonth));
+      setMonthBars(getDefaultMonthBars(currentYear, currentMonth));
     };
 
-    window.addEventListener('storage', handleStorage);
     window.addEventListener('mmm_events_updated', handleCustomUpdate);
+    window.addEventListener('mmm_bars_updated', handleBarsUpdate);
     window.addEventListener('mmm_reset_start_fresh', handleStartFreshReset);
     return () => {
-      window.removeEventListener('storage', handleStorage);
       window.removeEventListener('mmm_events_updated', handleCustomUpdate);
+      window.removeEventListener('mmm_bars_updated', handleBarsUpdate);
       window.removeEventListener('mmm_reset_start_fresh', handleStartFreshReset);
     };
   }, [currentYear, currentMonth]);
@@ -333,6 +347,7 @@ export default function App() {
                 onSelectDate={handleSelectDate}
                 onOpenEventDetail={(evt) => setActiveEventModal(evt)}
                 allEvents={filteredEvents}
+                monthBarsMap={monthBars}
                 lang={lang}
               />
 
@@ -386,6 +401,7 @@ export default function App() {
         onClose={() => setIsOptionsMenuOpen(false)}
         onSelectMonth={(idx) => setCurrentMonth(idx)}
         currentMonth={currentMonth}
+        settings={studioSettings}
         lang={lang}
         onToggleLang={handleToggleLang}
       />

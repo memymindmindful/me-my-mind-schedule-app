@@ -31,21 +31,104 @@ export function setAuthToken(token: string | null): void {
 }
 
 /**
- * Fetch events for month from backend API with fallback
+ * Fetch events for month from backend API
  */
 export async function apiFetchMonthEvents(year: number, month: number): Promise<ScheduleEvent[] | null> {
   try {
     // month in API is 1-12
     const res = await fetch(`${API_BASE}/events/month/${year}/${month + 1}`);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.warn(`[API] Failed to fetch events (${res.status}): ${res.statusText}`);
+      return null;
+    }
     const json: ApiResponse<ScheduleEvent[]> = await res.json();
     if (json.success && Array.isArray(json.data)) {
       return json.data;
     }
     return null;
   } catch (err) {
-    console.warn('Backend API not reachable, using local storage:', err);
+    console.error('Backend API not reachable:', err);
     return null;
+  }
+}
+
+/**
+ * Fetch calendar day bars/pills from backend API
+ */
+export async function apiFetchMonthBars(year: number, month: number): Promise<Record<number, any> | null> {
+  try {
+    const res = await fetch(`${API_BASE}/bars/${year}/${month + 1}`);
+    if (!res.ok) {
+      console.warn(`[API] Failed to fetch month bars (${res.status}): ${res.statusText}`);
+      return null;
+    }
+    const json: ApiResponse<Record<number, any>> = await res.json();
+    if (json.success && json.data) {
+      return json.data;
+    }
+    return null;
+  } catch (err) {
+    console.error('Failed to fetch month bars from server:', err);
+    return null;
+  }
+}
+
+/**
+ * Save calendar day bars/pills to backend API
+ */
+export async function apiSaveMonthBars(year: number, month: number, bars: Record<number, any>): Promise<any> {
+  const token = getAuthToken();
+  try {
+    const res = await fetch(`${API_BASE}/admin/bars/${year}/${month + 1}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ bars })
+    });
+    return res.json();
+  } catch (err) {
+    console.error('Failed to save month bars:', err);
+    return { success: false, error: err };
+  }
+}
+
+/**
+ * Verify Admin Password
+ */
+export async function apiVerifyAdminPassword(password: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/admin/verify-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    const json = await res.json();
+    return Boolean(json.success && json.verified);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Change Admin Password & Username
+ */
+export async function apiChangeAdminPassword(data: { username?: string; currentPassword?: string; newPassword?: string }): Promise<any> {
+  const token = getAuthToken();
+  try {
+    const res = await fetch(`${API_BASE}/admin/change-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  } catch (err) {
+    console.error('Failed to change password:', err);
+    return { success: false, error: 'Connection failed' };
   }
 }
 

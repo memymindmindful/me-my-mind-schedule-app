@@ -13,13 +13,15 @@ import {
 } from 'lucide-react';
 import { Language, TRANSLATIONS } from '../utils/translations';
 import { AllStudioSettings } from '../types';
-import { loadStudioSettingsLocal } from '../utils/adminStorage';
+import { DEFAULT_STUDIO_SETTINGS } from '../utils/adminStorage';
+import { apiFetchStudioSettings } from '../utils/apiClient';
 
 interface OptionsMenuModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectMonth: (monthIndex: number) => void;
   currentMonth: number;
+  settings?: AllStudioSettings;
   lang: Language;
   onToggleLang: () => void;
 }
@@ -29,14 +31,27 @@ export const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({
   onClose,
   onSelectMonth,
   currentMonth,
+  settings: propSettings,
   lang,
   onToggleLang
 }) => {
-  const [settings, setSettings] = useState<AllStudioSettings>(() => loadStudioSettingsLocal());
+  const [settings, setSettings] = useState<AllStudioSettings>(() => propSettings || DEFAULT_STUDIO_SETTINGS);
 
   useEffect(() => {
-    const handleSettingsUpdate = () => {
-      setSettings(loadStudioSettingsLocal());
+    if (propSettings) {
+      setSettings(propSettings);
+    } else {
+      apiFetchStudioSettings().then((res) => {
+        if (res && res.studio) setSettings(res);
+      });
+    }
+  }, [propSettings, isOpen]);
+
+  useEffect(() => {
+    const handleSettingsUpdate = (e: any) => {
+      if (e.detail) {
+        setSettings(e.detail);
+      }
     };
     window.addEventListener('mmm_settings_updated', handleSettingsUpdate);
     return () => {

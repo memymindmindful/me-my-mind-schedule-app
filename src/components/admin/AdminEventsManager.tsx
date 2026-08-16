@@ -25,8 +25,7 @@ import {
   UploadCloud
 } from 'lucide-react';
 import { ScheduleEvent, OfferingCategory, BranchLocation } from '../../types';
-import { loadMonthEvents, saveMonthEvents, resetMonthEvents } from '../../utils/adminStorage';
-import { apiCreateEvent, apiUpdateEvent, apiDeleteEvent, apiFetchMonthEvents } from '../../utils/apiClient';
+import { apiCreateEvent, apiUpdateEvent, apiDeleteEvent, apiFetchMonthEvents, apiResetData } from '../../utils/apiClient';
 import { TRANSLATIONS } from '../../utils/translations';
 import { FACILITATOR_BEEVER } from '../../data/scheduleData';
 
@@ -82,28 +81,22 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
   const [photoPreview, setPhotoPreview] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Load events from backend API or local storage
-  useEffect(() => {
-    let isMounted = true;
-    
-    // First try backend API
-    apiFetchMonthEvents(currentYear, currentMonth).then((apiEvts) => {
-      if (!isMounted) return;
-      if (apiEvts && Array.isArray(apiEvts) && apiEvts.length > 0) {
+  // Load events from backend API
+  const refreshEvents = async () => {
+    try {
+      const apiEvts = await apiFetchMonthEvents(currentYear, currentMonth);
+      if (apiEvts !== null) {
         setEvents(apiEvts);
-        saveMonthEvents(currentYear, currentMonth, apiEvts);
       } else {
-        const loaded = loadMonthEvents(currentYear, currentMonth);
-        setEvents(loaded);
+        setEvents([]);
       }
-    }).catch(() => {
-      if (!isMounted) return;
-      setEvents(loadMonthEvents(currentYear, currentMonth));
-    });
+    } catch {
+      setEvents([]);
+    }
+  };
 
-    return () => {
-      isMounted = false;
-    };
+  useEffect(() => {
+    refreshEvents();
   }, [currentYear, currentMonth]);
 
   const showToast = (msg: string) => {
@@ -189,11 +182,13 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     });
 
     setEvents(updated);
-    saveMonthEvents(currentYear, currentMonth, updated);
-    onDataChanged();
     
     // Sync with backend API
-    apiUpdateEvent(evt.id, { status: newStatus, bookedCount: newBookedCount }).catch(() => {});
+    await apiUpdateEvent(evt.id, { status: newStatus, bookedCount: newBookedCount });
+    window.dispatchEvent(new CustomEvent('mmm_events_updated', {
+      detail: { year: currentYear, month: currentMonth, events: updated }
+    }));
+    onDataChanged();
     showToast(isCurrentlyFull ? `ปลดล็อคที่นั่ง "${evt.name}" เป็นเปิดรับสมัครแล้ว` : `ปรับ "${evt.name}" เป็น Fully Booked (เต็มแล้ว)`);
   };
 
@@ -214,11 +209,13 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     });
 
     setEvents(updated);
-    saveMonthEvents(currentYear, currentMonth, updated);
-    onDataChanged();
 
     // Sync with backend API
-    apiUpdateEvent(evt.id, { bookedCount: newCount, status: newStatus }).catch(() => {});
+    await apiUpdateEvent(evt.id, { bookedCount: newCount, status: newStatus });
+    window.dispatchEvent(new CustomEvent('mmm_events_updated', {
+      detail: { year: currentYear, month: currentMonth, events: updated }
+    }));
+    onDataChanged();
   };
 
   // Duplicate Event
@@ -235,17 +232,21 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
       status: 'available'
     };
 
-    const updated = [newEvent, ...events];
-    setEvents(updated);
-    saveMonthEvents(currentYear, currentMonth, updated);
+    const res = await apiCreateEvent(newEvent);
+    if (res?.data) {
+      await refreshEvents();
+    } else {
+      setEvents(prev => [newEvent, ...prev]);
+    }
+
+    window.dispatchEvent(new CustomEvent('mmm_events_updated', {
+      detail: { year: currentYear, month: currentMonth }
+    }));
     onDataChanged();
-    
-    // Sync with backend API
-    apiCreateEvent(newEvent).catch(() => {});
     showToast(`คัดลอกอีเวนท์ "${evt.name}" ไปยังวันที่ ${targetDayStr}.${monthStr} เรียบร้อยแล้ว`);
   };
 
-  // Delete Event (Persisted to backend and localStorage)
+  // Delete Event (Persisted to backend)
   const handleDeleteEvent = async (id: string, name: string) => {
     if (!window.confirm(`ยืนยันการลบอีเวนท์ "${name}" ใช่หรือไม่? ข้อมูลจะถูกลบออกจากฐานข้อมูลอย่างถาวร`)) return;
     
@@ -256,33 +257,29 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
       console.warn('Backend delete warning:', err);
     }
 
-    // 2. Remove from state & local storage
+    // 2. Remove from state
     const updated = events.filter(e => e.id !== id);
     setEvents(updated);
-    saveMonthEvents(currentYear, currentMonth, updated);
+    window.dispatchEvent(new CustomEvent('mmm_events_updated', {
+      detail: { year: currentYear, month: currentMonth, events: updated }
+    }));
     onDataChanged();
     showToast(`ลบอีเวนท์ "${name}" ออกจากระบบถาวรเรียบร้อยแล้ว`);
   };
 
   // Reset Month Events
   const handleResetMonth = async (emptyOnly: boolean) => {
-    const confirmMsg = emptyOnly 
-      ? `ต้องการล้างข้อมูลอีเวนท์ทั้งหมดในเดือน ${monthName} ${currentYear} ให้เป็นตารางว่าง (0 อีเวนท์) เพื่อเตรียมใส่ข้อมูลจริงใช่หรือไม่?`
-      : `ต้องการรีเซ็ตอีเวนท์ในเดือน ${monthName} กลับเป็นข้อมูลตัวอย่างเริ่มต้นใช่หรือไม่?`;
+    const confirmMsg = `ต้องการล้างข้อมูลอีเวนท์ทั้งหมดในเดือน ${monthName} ${currentYear} ให้เป็นตารางว่าง (0 อีเวนท์) เพื่อเตรียมใส่ข้อมูลจริงใช่หรือไม่?`;
     
     if (!window.confirm(confirmMsg)) return;
 
-    if (emptyOnly) {
-      // Delete events in current month from backend
-      events.forEach(e => {
-        apiDeleteEvent(e.id).catch(() => {});
-      });
-    }
-
-    const resetResult = resetMonthEvents(currentYear, currentMonth, emptyOnly);
-    setEvents(resetResult);
+    await apiResetData('month_events', currentYear, currentMonth);
+    setEvents([]);
+    window.dispatchEvent(new CustomEvent('mmm_events_updated', {
+      detail: { year: currentYear, month: currentMonth, events: [] }
+    }));
     onDataChanged();
-    showToast(emptyOnly ? `ล้างข้อมูลอีเวนท์เดือน ${monthName} เรียบร้อยแล้ว (0 รายการ)` : `โหลดตัวอย่างอีเวนท์เดือน ${monthName} เรียบร้อยแล้ว`);
+    showToast(`ล้างข้อมูลอีเวนท์เดือน ${monthName} เรียบร้อยแล้ว (0 รายการ)`);
   };
 
   // Save Event from Form
@@ -342,36 +339,18 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
       status
     };
 
-    let updated: ScheduleEvent[];
     if (editingEventId) {
-      updated = events.map(e => e.id === editingEventId ? completeEvent : e);
       showToast(`อัปเดตอีเวนท์ "${completeEvent.name}" สำเร็จ!`);
-      apiUpdateEvent(editingEventId, completeEvent, selectedPhoto || undefined).then(res => {
-        if (res?.data?.posterUrl) {
-          completeEvent.posterUrl = res.data.posterUrl;
-          const refreshed = events.map(e => e.id === editingEventId ? completeEvent : e);
-          setEvents(refreshed);
-          saveMonthEvents(currentYear, currentMonth, refreshed);
-        }
-      }).catch(() => {});
+      await apiUpdateEvent(editingEventId, completeEvent, selectedPhoto || undefined);
     } else {
-      updated = [completeEvent, ...events];
       showToast(`เพิ่มอีเวนท์ "${completeEvent.name}" เรียบร้อยแล้ว!`);
-      apiCreateEvent(completeEvent, selectedPhoto || undefined).then(res => {
-        if (res?.data?.posterUrl) {
-          completeEvent.posterUrl = res.data.posterUrl;
-          const refreshed = [completeEvent, ...events];
-          setEvents(refreshed);
-          saveMonthEvents(currentYear, currentMonth, refreshed);
-        }
-      }).catch(() => {});
+      await apiCreateEvent(completeEvent, selectedPhoto || undefined);
     }
 
-    // Sort by date
-    updated.sort((a, b) => a.dateStr.localeCompare(b.dateStr));
-
-    setEvents(updated);
-    saveMonthEvents(currentYear, currentMonth, updated);
+    await refreshEvents();
+    window.dispatchEvent(new CustomEvent('mmm_events_updated', {
+      detail: { year: currentYear, month: currentMonth }
+    }));
     onDataChanged();
     setIsEditingModalOpen(false);
   };

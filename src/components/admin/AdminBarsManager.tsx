@@ -8,13 +8,14 @@ import {
   RefreshCw, 
   Check, 
   HelpCircle, 
-  Calendar,
-  Layers,
-  Slash,
-  Sparkle
+  Calendar, 
+  Layers, 
+  Slash, 
+  Sparkle 
 } from 'lucide-react';
 import { BranchLocation, DayBarConfig, SpecialStatusDetails } from '../../types';
-import { loadMonthBars, saveMonthBars } from '../../utils/adminStorage';
+import { getDefaultMonthBars } from '../../utils/adminStorage';
+import { apiFetchMonthBars, apiSaveMonthBars } from '../../utils/apiClient';
 import { TRANSLATIONS } from '../../utils/translations';
 
 interface AdminBarsManagerProps {
@@ -32,7 +33,7 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
   const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay(); // 0 = Sun
   const monthName = TRANSLATIONS.th.monthNames[currentMonth];
 
-  const [barsMap, setBarsMap] = useState<Record<number, DayBarConfig>>({});
+  const [barsMap, setBarsMap] = useState<Record<number, DayBarConfig>>(() => getDefaultMonthBars(currentYear, currentMonth));
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -46,8 +47,21 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
 
   // Load bar settings on month change
   useEffect(() => {
-    const loaded = loadMonthBars(currentYear, currentMonth);
-    setBarsMap(loaded);
+    let isMounted = true;
+    apiFetchMonthBars(currentYear, currentMonth).then((remoteBars) => {
+      if (!isMounted) return;
+      if (remoteBars && Object.keys(remoteBars).length > 0) {
+        setBarsMap(remoteBars);
+      } else {
+        setBarsMap(getDefaultMonthBars(currentYear, currentMonth));
+      }
+    }).catch(() => {
+      if (isMounted) setBarsMap(getDefaultMonthBars(currentYear, currentMonth));
+    });
+
+    return () => {
+      isMounted = false;
+    };
   }, [currentYear, currentMonth]);
 
   const activeDayConfig: DayBarConfig = barsMap[selectedDay] || {
@@ -56,7 +70,7 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
   };
 
   // Update specific day
-  const handleUpdateDayConfig = (updated: Partial<DayBarConfig>) => {
+  const handleUpdateDayConfig = async (updated: Partial<DayBarConfig>) => {
     const newMap = {
       ...barsMap,
       [selectedDay]: {
@@ -66,13 +80,19 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
       }
     };
     setBarsMap(newMap);
-    saveMonthBars(currentYear, currentMonth, newMap);
+    await apiSaveMonthBars(currentYear, currentMonth, newMap);
+    
+    // Dispatch in-memory sync event
+    window.dispatchEvent(new CustomEvent('mmm_bars_updated', {
+      detail: { year: currentYear, month: currentMonth, bars: newMap }
+    }));
+    
     onDataChanged();
     triggerSaveToast();
   };
 
   // Batch Apply Range
-  const handleApplyBatch = (e: React.FormEvent) => {
+  const handleApplyBatch = async (e: React.FormEvent) => {
     e.preventDefault();
     const start = Math.min(batchStartDay, batchEndDay);
     const end = Math.max(batchStartDay, batchEndDay);
@@ -159,7 +179,13 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
     }
 
     setBarsMap(newMap);
-    saveMonthBars(currentYear, currentMonth, newMap);
+    await apiSaveMonthBars(currentYear, currentMonth, newMap);
+
+    // Dispatch in-memory sync event
+    window.dispatchEvent(new CustomEvent('mmm_bars_updated', {
+      detail: { year: currentYear, month: currentMonth, bars: newMap }
+    }));
+
     onDataChanged();
     triggerSaveToast();
   };

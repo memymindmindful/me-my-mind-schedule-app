@@ -893,8 +893,159 @@ adminRouter.delete('/admin/services/:id', (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/admin/bars/:year/:month
+ * Save month bars to SQLite database
+ */
+adminRouter.post('/admin/bars/:year/:month', (req: Request, res: Response) => {
+  try {
+    const year = parseInt(req.params.year, 10);
+    const month = parseInt(req.params.month, 10);
+    const { bars } = req.body;
+
+    if (isNaN(year) || isNaN(month) || !bars || typeof bars !== 'object') {
+      res.status(400).json({ success: false, error: 'Invalid parameters or missing bars object' });
+      return;
+    }
+
+    const db = getDatabase();
+
+    // Delete existing bars for this month
+    db.run("DELETE FROM month_bars WHERE year = ? AND (month = ? OR month = ?)", [year, month, month > 0 ? month - 1 : month]);
+
+    // Insert new bars
+    Object.entries(bars).forEach(([dayStr, barData]: [string, any]) => {
+      const d = parseInt(dayStr, 10);
+      if (isNaN(d) || !barData) return;
+
+      const barId = `bar-${year}-${month}-${d}`;
+      const specialStatus = barData.specialStatus;
+
+      db.run(`
+        INSERT INTO month_bars (
+          id, year, month, dayNum, branch, tourCity, isPinkPill, isBrownPill, pillPosition,
+          hasSpecialStar, specialStatusType, specialStatusLabelTh, specialStatusLabelEn,
+          specialStatusSubTh, specialStatusSubEn, specialStatusBadgeBg, specialStatusBadgeText, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      `, [
+        barId,
+        year,
+        month,
+        d,
+        barData.branch || 'Nakhonsawan',
+        barData.tourCity || null,
+        barData.isPinkPill ? 1 : 0,
+        barData.isBrownPill ? 1 : 0,
+        barData.pillPosition || null,
+        barData.hasSpecialStar ? 1 : 0,
+        specialStatus?.type || null,
+        specialStatus?.labelTh || null,
+        specialStatus?.labelEn || null,
+        specialStatus?.subTh || null,
+        specialStatus?.subEn || null,
+        specialStatus?.badgeBg || null,
+        specialStatus?.badgeText || null
+      ]);
+    });
+
+    saveDatabase();
+    res.json({ success: true, message: 'Month bars saved successfully to database' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/admin/verify-password
+ * Verify admin password before sensitive operations
+ */
+adminRouter.post('/admin/verify-password', (req: Request, res: Response) => {
+  try {
+    const { password } = req.body;
+    if (!password) {
+      res.status(400).json({ success: false, error: 'Password required' });
+      return;
+    }
+
+    const db = getDatabase();
+    const result = db.exec("SELECT passwordHash FROM admin_users LIMIT 1");
+    if (!result || result.length === 0 || result[0].values.length === 0) {
+      res.status(404).json({ success: false, error: 'Admin user not configured' });
+      return;
+    }
+
+    const passwordHash = result[0].values[0][0] as string;
+    const isValid = bcrypt.compareSync(password, passwordHash);
+
+    if (isValid) {
+      res.json({ success: true, verified: true });
+    } else {
+      res.status(401).json({ success: false, verified: false, error: 'Invalid password' });
+    }
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/admin/change-password
+ * Update Admin Username and Password in SQLite DB
+ */
+adminRouter.post('/admin/change-password', authenticateToken, (req: AuthRequest, res: Response) => {
+  try {
+    const { username, currentPassword, newPassword } = req.body;
+    const userId = req.user?.id || 'admin-master-id';
+
+    const db = getDatabase();
+    const result = db.exec("SELECT id, username, passwordHash FROM admin_users WHERE id = ? OR username = ?", [userId, req.user?.username || 'admin']);
+
+    if (!result || result.length === 0 || result[0].values.length === 0) {
+      res.status(404).json({ success: false, error: 'Admin user not found' });
+      return;
+    }
+
+    const [id, currentUsername, passwordHash] = result[0].values[0];
+
+    // If changing password, verify current password
+    if (newPassword) {
+      if (!currentPassword) {
+        res.status(400).json({ success: false, error: 'Current password is required to change password' });
+        return;
+      }
+
+      const isValid = bcrypt.compareSync(currentPassword, passwordHash as string);
+      if (!isValid) {
+        res.status(401).json({ success: false, error: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
+        return;
+      }
+
+      const salt = bcrypt.genSaltSync(10);
+      const newHash = bcrypt.hashSync(newPassword.trim(), salt);
+      const newUsername = (username || currentUsername as string).trim();
+
+      db.run("UPDATE admin_users SET username = ?, passwordHash = ? WHERE id = ?", [newUsername, newHash, id]);
+      saveDatabase();
+
+      res.json({ success: true, message: 'บันทึกการเปลี่ยนชื่อผู้ใช้และรหัสผ่านใหม่เรียบร้อยแล้ว' });
+      return;
+    }
+
+    // If only changing username
+    if (username) {
+      db.run("UPDATE admin_users SET username = ? WHERE id = ?", [username.trim(), id]);
+      saveDatabase();
+      res.json({ success: true, message: 'บันทึกชื่อผู้ใช้ใหม่เรียบร้อยแล้ว' });
+      return;
+    }
+
+    res.status(400).json({ success: false, error: 'No changes requested' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
  * POST /api/admin/reset-data
- * Reset schedule events / start fresh
+ * Reset schedule events / bars / start fresh
  */
 adminRouter.post('/admin/reset-data', (req: Request, res: Response) => {
   try {
@@ -909,12 +1060,20 @@ adminRouter.post('/admin/reset-data', (req: Request, res: Response) => {
       return;
     }
 
+    if (resetType === 'month_bars' && year && month !== undefined) {
+      db.run("DELETE FROM month_bars WHERE year = ? AND (month = ? OR month = ?)", [Number(year), Number(month), Number(month) > 0 ? Number(month) - 1 : Number(month)]);
+      saveDatabase();
+      res.json({ success: true, message: `Cleared custom month bars for ${year}-${month}`, resetType });
+      return;
+    }
+
     if (resetType === 'all_data') {
       db.run("DELETE FROM events");
+      db.run("DELETE FROM month_bars");
       saveDatabase();
       res.json({
         success: true,
-        message: 'All events deleted. Defaulting focus to Nakhonsawan branch.',
+        message: 'All events and custom bars deleted from database. Defaulting focus to Nakhonsawan branch.',
         defaultBranch: 'Nakhonsawan',
         resetType: 'all_data'
       });

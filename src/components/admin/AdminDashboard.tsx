@@ -24,8 +24,8 @@ import {
   ShieldAlert,
   Settings
 } from 'lucide-react';
-import { checkAdminAuth, setAdminAuth, resetAllData, resetMonthEvents, resetMonthBars, getAdminCredentials, saveStoredBranchFilter } from '../../utils/adminStorage';
-import { apiResetData } from '../../utils/apiClient';
+import { checkAdminAuth, setAdminAuth } from '../../utils/adminStorage';
+import { apiResetData, apiVerifyAdminPassword } from '../../utils/apiClient';
 import { AdminLogin } from './AdminLogin';
 import { AdminBarsManager } from './AdminBarsManager';
 import { AdminEventsManager } from './AdminEventsManager';
@@ -84,38 +84,40 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToClient }
     }
   };
 
-  const handleConfirmReset = (e: React.FormEvent) => {
+  const handleConfirmReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    const creds = getAdminCredentials();
     const inputPass = resetPasswordInput.trim();
 
-    // Check password against current admin passcode or master fallbacks
-    const isValid = 
-      inputPass === creds.passcode || 
-      inputPass === 'admin' || 
-      inputPass === '1234' || 
-      inputPass === 'mindful2026' || 
-      inputPass === 'beever';
+    // Verify password with backend API
+    const isPasswordValid = await apiVerifyAdminPassword(inputPass);
 
-    if (!isValid) {
+    if (!isPasswordValid) {
       setResetPasswordError('รหัสผ่านผู้ดูแลระบบไม่ถูกต้อง กรุณากรอกใหม่อีกครั้ง');
       return;
     }
 
     if (resetTarget === 'month_events') {
-      resetMonthEvents(currentYear, currentMonth, true);
-      apiResetData('month_events', currentYear, currentMonth).catch(() => {});
+      await apiResetData('month_events', currentYear, currentMonth);
+      window.dispatchEvent(new CustomEvent('mmm_events_updated', {
+        detail: { year: currentYear, month: currentMonth, events: [] }
+      }));
       setToastMessage(`ล้างอีเวนท์เดือน ${monthName} เรียบร้อยแล้ว`);
     } else if (resetTarget === 'month_bars') {
-      resetMonthBars(currentYear, currentMonth, true);
+      await apiResetData('month_bars', currentYear, currentMonth);
+      window.dispatchEvent(new CustomEvent('mmm_bars_updated', {
+        detail: { year: currentYear, month: currentMonth }
+      }));
       setToastMessage(`รีเซ็ตแถบสีเดือน ${monthName} เรียบร้อยแล้ว`);
     } else if (resetTarget === 'all_data') {
-      resetAllData(true);
-      apiResetData('all_data').catch(() => {});
-      saveStoredBranchFilter('Nakhonsawan');
-      setToastMessage('ล้างอีเวนท์ทั้งหมด และตั้งค่าเริ่มต้นมุ่งเน้นสาขานครสวรรค์เรียบร้อยแล้ว');
+      await apiResetData('all_data');
+      window.dispatchEvent(new CustomEvent('mmm_events_updated', {
+        detail: { year: currentYear, month: currentMonth }
+      }));
+      window.dispatchEvent(new CustomEvent('mmm_bars_updated', {
+        detail: { year: currentYear, month: currentMonth }
+      }));
+      setToastMessage('ล้างข้อมูลและเริ่มต้นตารางในฐานข้อมูลเรียบร้อยแล้ว');
     }
-
 
     // Reset states
     setIsResetModalOpen(false);
