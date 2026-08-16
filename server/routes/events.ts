@@ -42,6 +42,7 @@ export function mapRowToEvent(columns: string[], row: any[]) {
     posterUrl: obj.posterUrl || '',
     posterTag: obj.posterTag || '',
     subtitle: obj.subtitle || '',
+    useGlobalFacilitator: obj.useGlobalFacilitator !== undefined ? (obj.useGlobalFacilitator === 1 || obj.useGlobalFacilitator === '1' || obj.useGlobalFacilitator === true) : true,
     facilitator: {
       name: obj.facilitatorName || 'Kru Beever (Supapit)',
       role: obj.facilitatorRole || 'Founder & Lead Somatic Alchemist',

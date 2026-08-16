@@ -64,6 +64,7 @@ export async function initDatabase(): Promise<Database> {
       facilitatorName TEXT,
       facilitatorRole TEXT,
       facilitatorBio TEXT,
+      useGlobalFacilitator INTEGER DEFAULT 1,
       sensoryNotes TEXT,
       benefits TEXT,
       preparationTips TEXT,
@@ -78,6 +79,13 @@ export async function initDatabase(): Promise<Database> {
   // Safe migration for isFree column
   try {
     db.run("ALTER TABLE events ADD COLUMN isFree INTEGER DEFAULT 0");
+  } catch {
+    // Column already exists
+  }
+
+  // Safe migration for useGlobalFacilitator column
+  try {
+    db.run("ALTER TABLE events ADD COLUMN useGlobalFacilitator INTEGER DEFAULT 1");
   } catch {
     // Column already exists
   }

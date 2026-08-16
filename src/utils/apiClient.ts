@@ -74,9 +74,35 @@ export async function apiFetchMonthBars(year: number, month: number): Promise<Re
 }
 
 /**
+ * Helper to handle fetch responses and handle 401 token expiration
+ */
+async function handleResponse<T = any>(res: Response): Promise<ApiResponse<T>> {
+  try {
+    const json = await res.json();
+    if (!res.ok) {
+      if (res.status === 401 || json.code === 'INVALID_TOKEN' || json.code === 'NO_TOKEN') {
+        window.dispatchEvent(new CustomEvent('mmm_auth_expired', { detail: { error: json.error || 'Session expired' } }));
+      }
+      return {
+        success: false,
+        error: json.error || `Server error (${res.status})`,
+        code: json.code || `HTTP_${res.status}`
+      };
+    }
+    return json;
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message || `Network error (${res.status})`,
+      code: 'NETWORK_ERROR'
+    };
+  }
+}
+
+/**
  * Save calendar day bars/pills to backend API
  */
-export async function apiSaveMonthBars(year: number, month: number, bars: Record<number, any>): Promise<any> {
+export async function apiSaveMonthBars(year: number, month: number, bars: Record<number, any>): Promise<ApiResponse> {
   const token = getAuthToken();
   try {
     const res = await fetch(`${API_BASE}/admin/bars/${year}/${month + 1}`, {
@@ -87,10 +113,10 @@ export async function apiSaveMonthBars(year: number, month: number, bars: Record
       },
       body: JSON.stringify({ bars })
     });
-    return res.json();
-  } catch (err) {
+    return handleResponse(res);
+  } catch (err: any) {
     console.error('Failed to save month bars:', err);
-    return { success: false, error: err };
+    return { success: false, error: err.message || 'Network error' };
   }
 }
 
@@ -114,7 +140,7 @@ export async function apiVerifyAdminPassword(password: string): Promise<boolean>
 /**
  * Change Admin Password & Username
  */
-export async function apiChangeAdminPassword(data: { username?: string; currentPassword?: string; newPassword?: string }): Promise<any> {
+export async function apiChangeAdminPassword(data: { username?: string; currentPassword?: string; newPassword?: string }): Promise<ApiResponse> {
   const token = getAuthToken();
   try {
     const res = await fetch(`${API_BASE}/admin/change-password`, {
@@ -125,10 +151,10 @@ export async function apiChangeAdminPassword(data: { username?: string; currentP
       },
       body: JSON.stringify(data)
     });
-    return res.json();
-  } catch (err) {
+    return handleResponse(res);
+  } catch (err: any) {
     console.error('Failed to change password:', err);
-    return { success: false, error: 'Connection failed' };
+    return { success: false, error: err.message || 'Connection failed' };
   }
 }
 
@@ -157,7 +183,7 @@ export async function apiAdminLogin(username: string, password: string): Promise
 /**
  * Admin Create Event via Backend API
  */
-export async function apiCreateEvent(eventData: Partial<ScheduleEvent>, photoFile?: File): Promise<any> {
+export async function apiCreateEvent(eventData: Partial<ScheduleEvent>, photoFile?: File): Promise<ApiResponse> {
   const token = getAuthToken();
   const formData = new FormData();
   
@@ -175,21 +201,24 @@ export async function apiCreateEvent(eventData: Partial<ScheduleEvent>, photoFil
     formData.append('photo', photoFile);
   }
 
-  const res = await fetch(`${API_BASE}/admin/events`, {
-    method: 'POST',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    body: formData
-  });
-
-  return res.json();
+  try {
+    const res = await fetch(`${API_BASE}/admin/events`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: formData
+    });
+    return handleResponse(res);
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error — could not connect to server' };
+  }
 }
 
 /**
  * Admin Update Event via Backend API
  */
-export async function apiUpdateEvent(id: string, eventData: Partial<ScheduleEvent>, photoFile?: File): Promise<any> {
+export async function apiUpdateEvent(id: string, eventData: Partial<ScheduleEvent>, photoFile?: File): Promise<ApiResponse> {
   const token = getAuthToken();
   const formData = new FormData();
   
@@ -207,29 +236,36 @@ export async function apiUpdateEvent(id: string, eventData: Partial<ScheduleEven
     formData.append('photo', photoFile);
   }
 
-  const res = await fetch(`${API_BASE}/admin/events/${id}`, {
-    method: 'PUT',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    body: formData
-  });
-
-  return res.json();
+  try {
+    const res = await fetch(`${API_BASE}/admin/events/${id}`, {
+      method: 'PUT',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: formData
+    });
+    return handleResponse(res);
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error — could not connect to server' };
+  }
 }
 
 /**
  * Admin Delete Event via Backend API
  */
-export async function apiDeleteEvent(id: string): Promise<any> {
+export async function apiDeleteEvent(id: string): Promise<ApiResponse> {
   const token = getAuthToken();
-  const res = await fetch(`${API_BASE}/admin/events/${id}`, {
-    method: 'DELETE',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    }
-  });
-  return res.json();
+  try {
+    const res = await fetch(`${API_BASE}/admin/events/${id}`, {
+      method: 'DELETE',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    });
+    return handleResponse(res);
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error' };
+  }
 }
 
 /**
@@ -253,7 +289,7 @@ export async function apiFetchStudioSettings(): Promise<any | null> {
 /**
  * Save Studio Settings (Branding & General)
  */
-export async function apiSaveStudioSettings(settingsData: any, logoFile?: File): Promise<any> {
+export async function apiSaveStudioSettings(settingsData: any, logoFile?: File): Promise<ApiResponse> {
   const token = getAuthToken();
   const formData = new FormData();
 
@@ -267,20 +303,24 @@ export async function apiSaveStudioSettings(settingsData: any, logoFile?: File):
     formData.append('logo', logoFile);
   }
 
-  const res = await fetch(`${API_BASE}/admin/settings`, {
-    method: 'POST',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    body: formData
-  });
-  return res.json();
+  try {
+    const res = await fetch(`${API_BASE}/admin/settings`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: formData
+    });
+    return handleResponse(res);
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error' };
+  }
 }
 
 /**
  * Save Facilitator Profile
  */
-export async function apiSaveFacilitator(facData: any, photoFile?: File): Promise<any> {
+export async function apiSaveFacilitator(facData: any, photoFile?: File): Promise<ApiResponse> {
   const token = getAuthToken();
   const formData = new FormData();
 
@@ -294,20 +334,24 @@ export async function apiSaveFacilitator(facData: any, photoFile?: File): Promis
     formData.append('photo', photoFile);
   }
 
-  const res = await fetch(`${API_BASE}/admin/facilitator`, {
-    method: 'POST',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    body: formData
-  });
-  return res.json();
+  try {
+    const res = await fetch(`${API_BASE}/admin/facilitator`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: formData
+    });
+    return handleResponse(res);
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error' };
+  }
 }
 
 /**
  * Save Branch (Create or Update)
  */
-export async function apiSaveBranch(branchData: any, photoFile?: File, id?: string): Promise<any> {
+export async function apiSaveBranch(branchData: any, photoFile?: File, id?: string): Promise<ApiResponse> {
   const token = getAuthToken();
   const formData = new FormData();
 
@@ -324,34 +368,42 @@ export async function apiSaveBranch(branchData: any, photoFile?: File, id?: stri
   const url = id ? `${API_BASE}/admin/branches/${id}` : `${API_BASE}/admin/branches`;
   const method = id ? 'PUT' : 'POST';
 
-  const res = await fetch(url, {
-    method,
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    body: formData
-  });
-  return res.json();
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: formData
+    });
+    return handleResponse(res);
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error' };
+  }
 }
 
 /**
  * Delete Branch
  */
-export async function apiDeleteBranch(id: string): Promise<any> {
+export async function apiDeleteBranch(id: string): Promise<ApiResponse> {
   const token = getAuthToken();
-  const res = await fetch(`${API_BASE}/admin/branches/${id}`, {
-    method: 'DELETE',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    }
-  });
-  return res.json();
+  try {
+    const res = await fetch(`${API_BASE}/admin/branches/${id}`, {
+      method: 'DELETE',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    });
+    return handleResponse(res);
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error' };
+  }
 }
 
 /**
  * Save Service (Create or Update)
  */
-export async function apiSaveService(serviceData: any, photoFile?: File, id?: string): Promise<any> {
+export async function apiSaveService(serviceData: any, photoFile?: File, id?: string): Promise<ApiResponse> {
   const token = getAuthToken();
   const formData = new FormData();
 
@@ -368,34 +420,42 @@ export async function apiSaveService(serviceData: any, photoFile?: File, id?: st
   const url = id ? `${API_BASE}/admin/services/${id}` : `${API_BASE}/admin/services`;
   const method = id ? 'PUT' : 'POST';
 
-  const res = await fetch(url, {
-    method,
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    body: formData
-  });
-  return res.json();
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: formData
+    });
+    return handleResponse(res);
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error' };
+  }
 }
 
 /**
  * Delete Service
  */
-export async function apiDeleteService(id: string): Promise<any> {
+export async function apiDeleteService(id: string): Promise<ApiResponse> {
   const token = getAuthToken();
-  const res = await fetch(`${API_BASE}/admin/services/${id}`, {
-    method: 'DELETE',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    }
-  });
-  return res.json();
+  try {
+    const res = await fetch(`${API_BASE}/admin/services/${id}`, {
+      method: 'DELETE',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    });
+    return handleResponse(res);
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error' };
+  }
 }
 
 /**
  * Reset data on server
  */
-export async function apiResetData(resetType: 'all_data' | 'month_events' | 'month_bars', year?: number, month?: number): Promise<any> {
+export async function apiResetData(resetType: 'all_data' | 'month_events' | 'month_bars', year?: number, month?: number): Promise<ApiResponse> {
   const token = getAuthToken();
   try {
     const res = await fetch(`${API_BASE}/admin/reset-data`, {
@@ -406,10 +466,10 @@ export async function apiResetData(resetType: 'all_data' | 'month_events' | 'mon
       },
       body: JSON.stringify({ resetType, year, month })
     });
-    return res.json();
-  } catch (err) {
+    return handleResponse(res);
+  } catch (err: any) {
     console.warn('apiResetData failed:', err);
-    return { success: false, error: err };
+    return { success: false, error: err.message || 'Network error' };
   }
 }
 

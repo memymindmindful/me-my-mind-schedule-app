@@ -51,9 +51,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToClient }
   const [currentYear, setCurrentYear] = useState<number>(() => new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState<number>(() => new Date().getMonth()); // 0-indexed
 
-  // Check auth state on mount
+  // Check auth state on mount and listen to token expiration
   useEffect(() => {
     setIsAuthenticated(checkAdminAuth());
+
+    const handleAuthExpired = (e: any) => {
+      setAdminAuth(false);
+      setIsAuthenticated(false);
+      setToastMessage(e?.detail?.error || 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+      setTimeout(() => setToastMessage(null), 4000);
+    };
+
+    window.addEventListener('mmm_auth_expired', handleAuthExpired);
+    return () => window.removeEventListener('mmm_auth_expired', handleAuthExpired);
   }, []);
 
   const handleLoginSuccess = () => {

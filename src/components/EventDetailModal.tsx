@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   X, 
   Calendar, 
@@ -8,9 +8,10 @@ import {
   CheckCircle2, 
   Share2, 
   Sparkles, 
-  MessageCircle
+  MessageCircle,
+  Heart
 } from 'lucide-react';
-import { ScheduleEvent, BookingSubmission } from '../types';
+import { ScheduleEvent, BookingSubmission, FacilitatorInfo } from '../types';
 import { BRANCH_INFO } from '../data/scheduleData';
 import { Language, TRANSLATIONS } from '../utils/translations';
 import { getEventBookingMessage, openLineWithMessage } from '../utils/lineMessages';
@@ -22,6 +23,7 @@ interface EventDetailModalProps {
   onConfirmBooking: (booking: BookingSubmission) => void;
   lang: Language;
   onShowToast?: (message: string) => void;
+  globalFacilitator?: FacilitatorInfo | null;
 }
 
 export const EventDetailModal: React.FC<EventDetailModalProps> = ({
@@ -29,7 +31,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   onClose,
   onConfirmBooking,
   lang,
-  onShowToast
+  onShowToast,
+  globalFacilitator
 }) => {
   if (!event) return null;
 
@@ -61,8 +64,42 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
     ? (lang === 'th' ? 'ฟรี (FREE)' : 'Free')
     : `฿${event.priceThb.toLocaleString()} THB`;
 
+  // Compute live effective facilitator details (Sync with Global Profile or Event Custom Override)
+  const useGlobal = event.useGlobalFacilitator !== false;
+  const effectiveFacilitator = useMemo(() => {
+    if (useGlobal && globalFacilitator) {
+      return {
+        name: lang === 'th' 
+          ? (globalFacilitator.nameTh || globalFacilitator.nameEn || event.facilitator?.name || 'Kru Beever (Supapit)')
+          : (globalFacilitator.nameEn || globalFacilitator.nameTh || event.facilitator?.name || 'Kru Beever (Supapit)'),
+        role: lang === 'th'
+          ? (globalFacilitator.titleTh || globalFacilitator.titleEn || event.facilitator?.role || 'Founder & Lead Somatic Alchemist')
+          : (globalFacilitator.titleEn || globalFacilitator.titleTh || event.facilitator?.role || 'Founder & Lead Somatic Alchemist'),
+        bio: lang === 'th'
+          ? (globalFacilitator.bioShortTh || globalFacilitator.bioLongTh || event.facilitator?.bio || 'Certified Sound Healing Practitioner and Holistic Facial Ritualist.')
+          : (globalFacilitator.bioShortEn || globalFacilitator.bioLongEn || globalFacilitator.bioShortTh || event.facilitator?.bio || 'Certified Sound Healing Practitioner and Holistic Facial Ritualist.'),
+        avatarUrl: globalFacilitator.photoUrl || event.facilitator?.avatarUrl
+      };
+    }
+    return {
+      name: event.facilitator?.name || 'Kru Beever (Supapit)',
+      role: event.facilitator?.role || 'Lead Facilitator',
+      bio: event.facilitator?.bio || '',
+      avatarUrl: event.facilitator?.avatarUrl
+    };
+  }, [useGlobal, globalFacilitator, event.facilitator, lang]);
+
+  const initials = useMemo(() => {
+    if (!effectiveFacilitator.name) return 'KB';
+    const parts = effectiveFacilitator.name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return effectiveFacilitator.name.slice(0, 2).toUpperCase();
+  }, [effectiveFacilitator.name]);
+
   const handleShare = () => {
-    const text = `✨ ${displayName} - Me.My.Mind Mindfulness Studio\n📅 ${event.dateDisplay} (${event.startTime} - ${event.endTime})\n📍 ${event.locationDetails}\nExchange: ${priceDisplayStr}\nFacilitator: ${event.facilitator.name}\nLINE Booking: @me.my.mind.mindful`;
+    const text = `✨ ${displayName} - Me.My.Mind Mindfulness Studio\n📅 ${event.dateDisplay} (${event.startTime} - ${event.endTime})\n📍 ${event.locationDetails}\nExchange: ${priceDisplayStr}\nFacilitator: ${effectiveFacilitator.name}\nLINE Booking: @me.my.mind.mindful`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(text);
       setCopiedLink(true);
@@ -288,54 +325,88 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
               </div>
 
               {/* Facilitator Info */}
-              <div className="p-3 rounded-2xl bg-[#FAF7F5] border border-[#EFE8E1] flex items-start gap-3">
-                <div className="w-9 h-9 rounded-full bg-[#E84D84] text-white flex items-center justify-center font-bold text-xs shadow-xs flex-shrink-0">
-                  KB
+              <div className="p-3.5 rounded-2xl bg-[#FAF7F5] border border-[#EFE8E1] flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#E84D84] text-white flex items-center justify-center font-bold text-xs shadow-xs flex-shrink-0 overflow-hidden">
+                  {effectiveFacilitator.avatarUrl ? (
+                    <img 
+                      src={effectiveFacilitator.avatarUrl} 
+                      alt={effectiveFacilitator.name} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span>{initials}</span>
+                  )}
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <h4 className="font-bold text-xs text-[#1E1E1E]">
-                    {event.facilitator.name}
+                    {effectiveFacilitator.name}
                   </h4>
                   <span className="text-[11px] text-[#E84D84] font-medium block">
-                    {event.facilitator.role}
+                    {effectiveFacilitator.role}
                   </span>
-                  <p className="text-[11px] text-[#666] mt-0.5 leading-snug">
-                    {event.facilitator.bio}
-                  </p>
+                  {effectiveFacilitator.bio && (
+                    <p className="text-[11px] text-[#666] mt-0.5 leading-snug">
+                      {effectiveFacilitator.bio}
+                    </p>
+                  )}
                 </div>
               </div>
 
               {/* Sensory elements & tools */}
-              <div className="space-y-1">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#888]">
-                  {t.sensoryNotes}
-                </h4>
-                <div className="flex flex-wrap gap-1.5">
-                  {event.sensoryNotes.map((note, idx) => (
-                    <span 
-                      key={idx}
-                      className="px-2.5 py-1 rounded-lg text-[11px] bg-[#FAF0F3] text-[#A6355C] border border-[#F8DDE5] font-medium"
-                    >
-                      • {note}
-                    </span>
-                  ))}
+              {event.sensoryNotes && event.sensoryNotes.length > 0 && (
+                <div className="space-y-1.5">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#888] flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#E84D84]" />
+                    <span>{t.sensoryNotes}</span>
+                  </h4>
+                  <div className="flex flex-wrap gap-1.5">
+                    {event.sensoryNotes.map((note, idx) => (
+                      <span 
+                        key={idx}
+                        className="px-2.5 py-1 rounded-lg text-[11px] bg-[#FAF0F3] text-[#A6355C] border border-[#F8DDE5] font-medium"
+                      >
+                        • {note}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Benefits */}
-              <div className="space-y-1">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#888]">
-                  {t.keyBenefits}
-                </h4>
-                <ul className="space-y-1 text-xs text-[#444]">
-                  {event.benefits.map((b, idx) => (
-                    <li key={idx} className="flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-[#E84D84] flex-shrink-0" />
-                      <span>{b}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              {event.benefits && event.benefits.length > 0 && (
+                <div className="space-y-1.5">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#888] flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#E84D84]" />
+                    <span>{t.keyBenefits}</span>
+                  </h4>
+                  <ul className="space-y-1 text-xs text-[#444]">
+                    {event.benefits.map((b, idx) => (
+                      <li key={idx} className="flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#E84D84] flex-shrink-0" />
+                        <span>{b}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Preparation Tips */}
+              {event.preparationTips && event.preparationTips.length > 0 && (
+                <div className="space-y-1.5">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#888] flex items-center gap-1.5">
+                    <Heart className="w-3.5 h-3.5 text-[#E84D84]" />
+                    <span>{lang === 'th' ? 'ข้อแนะนำการเตรียมตัว' : 'Preparation Tips'}</span>
+                  </h4>
+                  <ul className="space-y-1 text-xs text-[#555]">
+                    {event.preparationTips.map((tip, idx) => (
+                      <li key={idx} className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#E84D84] flex-shrink-0" />
+                        <span>{tip}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </>
           )}
         </div>

@@ -22,12 +22,15 @@ import {
   XCircle,
   HelpCircle,
   Image as ImageIcon,
-  UploadCloud
+  UploadCloud,
+  UserCheck,
+  Layers,
+  Heart,
+  AlertTriangle
 } from 'lucide-react';
-import { ScheduleEvent, OfferingCategory, BranchLocation } from '../../types';
-import { apiCreateEvent, apiUpdateEvent, apiDeleteEvent, apiFetchMonthEvents, apiResetData } from '../../utils/apiClient';
+import { ScheduleEvent, OfferingCategory, BranchLocation, Facilitator, FacilitatorInfo } from '../../types';
+import { apiCreateEvent, apiUpdateEvent, apiDeleteEvent, apiFetchMonthEvents, apiResetData, apiFetchStudioSettings } from '../../utils/apiClient';
 import { TRANSLATIONS } from '../../utils/translations';
-import { FACILITATOR_BEEVER } from '../../data/scheduleData';
 
 interface AdminEventsManagerProps {
   currentYear: number;
@@ -53,6 +56,7 @@ const DEFAULT_EVENT_FORM: Partial<ScheduleEvent> = {
   level: 'All Levels',
   description: '',
   posterUrl: '',
+  useGlobalFacilitator: true,
   benefits: ['คืนสมดุลให้ร่างกายและจิตใจ', 'ผ่อนคลายกล้ามเนื้อและระบบประสาท', 'คลายความตึงเครียดสะสม'],
   sensoryNotes: ['Tibetan Singing Bowls', 'Organic Herbal Tea', 'Essential Oil Mist'],
   preparationTips: ['สวมใส่ชุดหลวมสบาย ไม่รัดแน่น'],
@@ -61,6 +65,29 @@ const DEFAULT_EVENT_FORM: Partial<ScheduleEvent> = {
   adminNote: '',
   status: 'available'
 };
+
+const POPULAR_SENSORY_NOTES = [
+  'Tibetan Singing Bowls',
+  'Crystal Singing Bowls',
+  'Organic Herbal Tea',
+  'Essential Oil Mist',
+  'Aromatherapy Hydrosol',
+  'Somatic Breathwork',
+  'Acoustic Gong Bath',
+  'Tuning Forks (432Hz)',
+  'Weighted Eye Pillow',
+  'Reflective Journaling'
+];
+
+const POPULAR_BENEFITS = [
+  'คืนสมดุลให้ร่างกายและจิตใจ',
+  'ผ่อนคลายกล้ามเนื้อและระบบประสาท',
+  'คลายความตึงเครียดสะสม',
+  'ช่วยปรับคลื่นสมองให้นอนหลับลึกขึ้น',
+  'ฟื้นฟูผิวหน้าและผ่อนคลายกล้ามเนื้อ',
+  'เสริมสร้างสติและสมาธิในการทำงาน',
+  'ปลดปล่อยอารมณ์และประจุความเครียด'
+];
 
 export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
   currentYear,
@@ -72,6 +99,7 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
   const monthName = TRANSLATIONS.th.monthNames[currentMonth];
 
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
+  const [globalFacilitator, setGlobalFacilitator] = useState<FacilitatorInfo | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isEditingModalOpen, setIsEditingModalOpen] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
@@ -79,9 +107,14 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
   const [formDayNum, setFormDayNum] = useState<number>(4);
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>('');
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastState, setToastState] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  // Load events from backend API
+  // Tag inputs state
+  const [newSensoryNoteInput, setNewSensoryNoteInput] = useState('');
+  const [newBenefitInput, setNewBenefitInput] = useState('');
+  const [newPrepTipInput, setNewPrepTipInput] = useState('');
+
+  // Load events and global facilitator profile
   const refreshEvents = async () => {
     try {
       const apiEvts = await apiFetchMonthEvents(currentYear, currentMonth);
@@ -95,13 +128,94 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     }
   };
 
+  const loadGlobalSettings = async () => {
+    try {
+      const res = await apiFetchStudioSettings();
+      if (res?.facilitator) {
+        setGlobalFacilitator(res.facilitator);
+      }
+    } catch (err) {
+      console.warn('Could not load global settings in events manager:', err);
+    }
+  };
+
   useEffect(() => {
     refreshEvents();
+    loadGlobalSettings();
+
+    const handleSettingsUpdated = (e: any) => {
+      if (e?.detail?.facilitator) {
+        setGlobalFacilitator(e.detail.facilitator);
+      }
+    };
+
+    const handleAuthExpired = (e: any) => {
+      showToast(e?.detail?.error || 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่อีกครั้ง', 'error');
+    };
+
+    window.addEventListener('mmm_settings_updated', handleSettingsUpdated);
+    window.addEventListener('mmm_auth_expired', handleAuthExpired);
+    return () => {
+      window.removeEventListener('mmm_settings_updated', handleSettingsUpdated);
+      window.removeEventListener('mmm_auth_expired', handleAuthExpired);
+    };
   }, [currentYear, currentMonth]);
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToastState({ message, type });
+    setTimeout(() => setToastState(null), 3500);
+  };
+
+  // Tag handlers
+  const handleAddSensoryNote = (noteText: string) => {
+    const trimmed = noteText.trim();
+    if (!trimmed) return;
+    const current = formData.sensoryNotes || [];
+    if (!current.includes(trimmed)) {
+      setFormData(prev => ({ ...prev, sensoryNotes: [...(prev.sensoryNotes || []), trimmed] }));
+    }
+    setNewSensoryNoteInput('');
+  };
+
+  const handleRemoveSensoryNote = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      sensoryNotes: (prev.sensoryNotes || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleAddBenefit = (benefitText: string) => {
+    const trimmed = benefitText.trim();
+    if (!trimmed) return;
+    const current = formData.benefits || [];
+    if (!current.includes(trimmed)) {
+      setFormData(prev => ({ ...prev, benefits: [...(prev.benefits || []), trimmed] }));
+    }
+    setNewBenefitInput('');
+  };
+
+  const handleRemoveBenefit = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      benefits: (prev.benefits || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleAddPrepTip = (tipText: string) => {
+    const trimmed = tipText.trim();
+    if (!trimmed) return;
+    const current = formData.preparationTips || [];
+    if (!current.includes(trimmed)) {
+      setFormData(prev => ({ ...prev, preparationTips: [...(prev.preparationTips || []), trimmed] }));
+    }
+    setNewPrepTipInput('');
+  };
+
+  const handleRemovePrepTip = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      preparationTips: (prev.preparationTips || []).filter((_, i) => i !== index)
+    }));
   };
 
   // Handle Photo Selection
@@ -141,8 +255,25 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     setSelectedPhoto(null);
     setPhotoPreview('');
     setFormDayNum(day);
+    setNewSensoryNoteInput('');
+    setNewBenefitInput('');
+    setNewPrepTipInput('');
+
+    const defaultFacilitator: Facilitator = {
+      name: globalFacilitator?.nameTh || globalFacilitator?.nameEn || 'Kru Beever (Supapit)',
+      role: globalFacilitator?.titleTh || globalFacilitator?.titleEn || 'Founder & Lead Somatic Alchemist',
+      bio: globalFacilitator?.bioShortTh || globalFacilitator?.bioLongTh || 'Certified Sound Healing Practitioner and Holistic Facial Ritualist.',
+      avatarUrl: globalFacilitator?.photoUrl || '',
+      certifications: globalFacilitator?.certifications || []
+    };
+
     setFormData({
       ...DEFAULT_EVENT_FORM,
+      useGlobalFacilitator: true,
+      facilitator: defaultFacilitator,
+      sensoryNotes: ['Tibetan Singing Bowls', 'Organic Herbal Tea', 'Essential Oil Mist'],
+      benefits: ['คืนสมดุลให้ร่างกายและจิตใจ', 'ผ่อนคลายกล้ามเนื้อและระบบประสาท', 'คลายความตึงเครียดสะสม'],
+      preparationTips: ['สวมใส่ชุดหลวมสบาย ไม่รัดแน่น'],
       isFree: false,
       dateStr: `${currentYear}-${monthStr}-${String(day).padStart(2, '0')}`,
       dateDisplay: `${String(day).padStart(2, '0')}.${monthStr}`
@@ -157,8 +288,16 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     setPhotoPreview(evt.posterUrl || '');
     const day = Number(evt.dateStr.split('-')[2]) || 1;
     setFormDayNum(day);
+    setNewSensoryNoteInput('');
+    setNewBenefitInput('');
+    setNewPrepTipInput('');
+
     setFormData({ 
       ...evt,
+      useGlobalFacilitator: evt.useGlobalFacilitator ?? true,
+      sensoryNotes: Array.isArray(evt.sensoryNotes) ? evt.sensoryNotes : [],
+      benefits: Array.isArray(evt.benefits) ? evt.benefits : [],
+      preparationTips: Array.isArray(evt.preparationTips) ? evt.preparationTips : [],
       isFree: evt.isFree ?? (evt.priceThb === 0)
     });
     setIsEditingModalOpen(true);
@@ -184,12 +323,17 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     setEvents(updated);
     
     // Sync with backend API
-    await apiUpdateEvent(evt.id, { status: newStatus, bookedCount: newBookedCount });
-    window.dispatchEvent(new CustomEvent('mmm_events_updated', {
-      detail: { year: currentYear, month: currentMonth, events: updated }
-    }));
-    onDataChanged();
-    showToast(isCurrentlyFull ? `ปลดล็อคที่นั่ง "${evt.name}" เป็นเปิดรับสมัครแล้ว` : `ปรับ "${evt.name}" เป็น Fully Booked (เต็มแล้ว)`);
+    const res = await apiUpdateEvent(evt.id, { status: newStatus, bookedCount: newBookedCount });
+    if (res && res.success) {
+      window.dispatchEvent(new CustomEvent('mmm_events_updated', {
+        detail: { year: currentYear, month: currentMonth, events: updated }
+      }));
+      onDataChanged();
+      showToast(isCurrentlyFull ? `ปลดล็อคที่นั่ง "${evt.name}" เป็นเปิดรับสมัครแล้ว` : `ปรับ "${evt.name}" เป็น Fully Booked (เต็มแล้ว)`, 'success');
+    } else {
+      showToast(`❌ ปรับสถานะไม่สำเร็จ: ${res?.error || 'เกิดข้อผิดพลาด'}`, 'error');
+      await refreshEvents();
+    }
   };
 
   // Quick update booked count (+ / -)
@@ -211,11 +355,16 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     setEvents(updated);
 
     // Sync with backend API
-    await apiUpdateEvent(evt.id, { bookedCount: newCount, status: newStatus });
-    window.dispatchEvent(new CustomEvent('mmm_events_updated', {
-      detail: { year: currentYear, month: currentMonth, events: updated }
-    }));
-    onDataChanged();
+    const res = await apiUpdateEvent(evt.id, { bookedCount: newCount, status: newStatus });
+    if (res && res.success) {
+      window.dispatchEvent(new CustomEvent('mmm_events_updated', {
+        detail: { year: currentYear, month: currentMonth, events: updated }
+      }));
+      onDataChanged();
+    } else {
+      showToast(`❌ อัปเดตจำนวนที่นั่งไม่สำเร็จ: ${res?.error || 'เกิดข้อผิดพลาด'}`, 'error');
+      await refreshEvents();
+    }
   };
 
   // Duplicate Event
@@ -233,38 +382,38 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     };
 
     const res = await apiCreateEvent(newEvent);
-    if (res?.data) {
+    if (res && res.success) {
       await refreshEvents();
+      window.dispatchEvent(new CustomEvent('mmm_events_updated', {
+        detail: { year: currentYear, month: currentMonth }
+      }));
+      onDataChanged();
+      showToast(`คัดลอกอีเวนท์ "${evt.name}" ไปยังวันที่ ${targetDayStr}.${monthStr} เรียบร้อยแล้ว`, 'success');
     } else {
-      setEvents(prev => [newEvent, ...prev]);
+      showToast(`❌ คัดลอกอีเวนท์ไม่สำเร็จ: ${res?.error || 'เกิดข้อผิดพลาด'}`, 'error');
     }
-
-    window.dispatchEvent(new CustomEvent('mmm_events_updated', {
-      detail: { year: currentYear, month: currentMonth }
-    }));
-    onDataChanged();
-    showToast(`คัดลอกอีเวนท์ "${evt.name}" ไปยังวันที่ ${targetDayStr}.${monthStr} เรียบร้อยแล้ว`);
   };
 
   // Delete Event (Persisted to backend)
   const handleDeleteEvent = async (id: string, name: string) => {
     if (!window.confirm(`ยืนยันการลบอีเวนท์ "${name}" ใช่หรือไม่? ข้อมูลจะถูกลบออกจากฐานข้อมูลอย่างถาวร`)) return;
     
-    // 1. Call Backend API
     try {
-      await apiDeleteEvent(id);
-    } catch (err) {
-      console.warn('Backend delete warning:', err);
+      const res = await apiDeleteEvent(id);
+      if (res && res.success) {
+        const updated = events.filter(e => e.id !== id);
+        setEvents(updated);
+        window.dispatchEvent(new CustomEvent('mmm_events_updated', {
+          detail: { year: currentYear, month: currentMonth, events: updated }
+        }));
+        onDataChanged();
+        showToast(`ลบอีเวนท์ "${name}" ออกจากระบบถาวรเรียบร้อยแล้ว`, 'success');
+      } else {
+        showToast(`❌ ลบไม่สำเร็จ: ${res?.error || 'เกิดข้อผิดพลาดในการลบ'}`, 'error');
+      }
+    } catch (err: any) {
+      showToast(`❌ เกิดข้อผิดพลาด: ${err.message || 'ไม่สามารถลบอีเวนท์ได้'}`, 'error');
     }
-
-    // 2. Remove from state
-    const updated = events.filter(e => e.id !== id);
-    setEvents(updated);
-    window.dispatchEvent(new CustomEvent('mmm_events_updated', {
-      detail: { year: currentYear, month: currentMonth, events: updated }
-    }));
-    onDataChanged();
-    showToast(`ลบอีเวนท์ "${name}" ออกจากระบบถาวรเรียบร้อยแล้ว`);
   };
 
   // Reset Month Events
@@ -273,20 +422,24 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     
     if (!window.confirm(confirmMsg)) return;
 
-    await apiResetData('month_events', currentYear, currentMonth);
-    setEvents([]);
-    window.dispatchEvent(new CustomEvent('mmm_events_updated', {
-      detail: { year: currentYear, month: currentMonth, events: [] }
-    }));
-    onDataChanged();
-    showToast(`ล้างข้อมูลอีเวนท์เดือน ${monthName} เรียบร้อยแล้ว (0 รายการ)`);
+    const res = await apiResetData('month_events', currentYear, currentMonth);
+    if (res && res.success) {
+      setEvents([]);
+      window.dispatchEvent(new CustomEvent('mmm_events_updated', {
+        detail: { year: currentYear, month: currentMonth, events: [] }
+      }));
+      onDataChanged();
+      showToast(`ล้างข้อมูลอีเวนท์เดือน ${monthName} เรียบร้อยแล้ว (0 รายการ)`, 'success');
+    } else {
+      showToast(`❌ รีเซ็ตไม่สำเร็จ: ${res?.error || 'เกิดข้อผิดพลาด'}`, 'error');
+    }
   };
 
   // Save Event from Form
   const handleSaveForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name?.trim()) {
-      alert('กรุณากรอกชื่อกิจกรรม');
+      showToast('กรุณากรอกชื่อกิจกรรม', 'error');
       return;
     }
 
@@ -315,22 +468,23 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
       startTime: formData.startTime || '09:00 AM',
       endTime: formData.endTime || '10:30 AM',
       durationMinutes: Number(formData.durationMinutes) || 90,
-      facilitator: formData.facilitator || FACILITATOR_BEEVER,
+      useGlobalFacilitator: formData.useGlobalFacilitator !== false,
+      facilitator: {
+        name: formData.facilitator?.name?.trim() || (globalFacilitator?.nameTh || 'Kru Beever (Supapit)'),
+        role: formData.facilitator?.role?.trim() || (globalFacilitator?.titleTh || 'Founder & Lead Somatic Alchemist'),
+        bio: formData.facilitator?.bio?.trim() || (globalFacilitator?.bioShortTh || 'Certified Sound Healing Practitioner and Holistic Facial Ritualist.'),
+        avatarUrl: formData.facilitator?.avatarUrl || globalFacilitator?.photoUrl || '',
+        certifications: formData.facilitator?.certifications || globalFacilitator?.certifications || []
+      },
       priceThb,
       isFree,
       capacity,
       bookedCount: isFullyBooked && bookedCount < capacity ? capacity : bookedCount,
       level: formData.level || 'All Levels',
-      sensoryNotes: formData.sensoryNotes && formData.sensoryNotes.length > 0 
-        ? formData.sensoryNotes 
-        : ['Tibetan Sound Bath', 'Organic Hydrosol'],
+      sensoryNotes: formData.sensoryNotes || [],
       description: formData.description?.trim() || 'รายละเอียดคลาสและศาสตร์การดูแลบำบัด',
-      benefits: formData.benefits && formData.benefits.length > 0 
-        ? formData.benefits 
-        : ['ผ่อนคลายลึก', 'คืนสมดุลพลังงาน'],
-      preparationTips: formData.preparationTips && formData.preparationTips.length > 0 
-        ? formData.preparationTips 
-        : ['สวมชุดหลวมสบาย'],
+      benefits: formData.benefits || [],
+      preparationTips: formData.preparationTips || [],
       posterUrl: formData.posterUrl,
       posterTag: formData.posterTag,
       isSpecialStar: !!formData.isSpecialStar,
@@ -339,20 +493,37 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
       status
     };
 
-    if (editingEventId) {
-      showToast(`อัปเดตอีเวนท์ "${completeEvent.name}" สำเร็จ!`);
-      await apiUpdateEvent(editingEventId, completeEvent, selectedPhoto || undefined);
-    } else {
-      showToast(`เพิ่มอีเวนท์ "${completeEvent.name}" เรียบร้อยแล้ว!`);
-      await apiCreateEvent(completeEvent, selectedPhoto || undefined);
-    }
+    try {
+      let result;
+      if (editingEventId) {
+        result = await apiUpdateEvent(editingEventId, completeEvent, selectedPhoto || undefined);
+      } else {
+        result = await apiCreateEvent(completeEvent, selectedPhoto || undefined);
+      }
 
-    await refreshEvents();
-    window.dispatchEvent(new CustomEvent('mmm_events_updated', {
-      detail: { year: currentYear, month: currentMonth }
-    }));
-    onDataChanged();
-    setIsEditingModalOpen(false);
+      if (result && result.success) {
+        showToast(
+          editingEventId 
+            ? `อัปเดตอีเวนท์ "${completeEvent.name}" สำเร็จ!` 
+            : `เพิ่มอีเวนท์ "${completeEvent.name}" เรียบร้อยแล้ว!`,
+          'success'
+        );
+        await refreshEvents();
+        window.dispatchEvent(new CustomEvent('mmm_events_updated', {
+          detail: { year: currentYear, month: currentMonth }
+        }));
+        onDataChanged();
+        setIsEditingModalOpen(false);
+      } else {
+        const errorMsg = result?.error || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
+        showToast(`❌ บันทึกไม่สำเร็จ: ${errorMsg}`, 'error');
+        if (result?.code === 'INVALID_TOKEN' || result?.code === 'NO_TOKEN' || result?.code === 'UNAUTHORIZED') {
+          showToast('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่', 'error');
+        }
+      }
+    } catch (err: any) {
+      showToast(`❌ เกิดข้อผิดพลาด: ${err.message || 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้'}`, 'error');
+    }
   };
 
   const filteredEvents = events.filter(e => {
@@ -965,7 +1136,347 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
                 />
               </div>
 
-              {/* Row 9: Special Star Highlight Toggle */}
+              {/* Row 9: Facilitator Sync & Custom Profile */}
+              <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#EFE8E1] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="w-4 h-4 text-[#E84D84]" />
+                    <span className="font-bold text-xs text-[#1E1E1E]">ข้อมูลครูผู้สอน / ผู้บำบัด (Facilitator)</span>
+                  </div>
+                  <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-[#E84D84]">
+                    <input
+                      type="checkbox"
+                      checked={formData.useGlobalFacilitator !== false}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setFormData(prev => ({
+                          ...prev,
+                          useGlobalFacilitator: checked,
+                          facilitator: checked ? {
+                            name: globalFacilitator?.nameTh || globalFacilitator?.nameEn || 'Kru Beever (Supapit)',
+                            role: globalFacilitator?.titleTh || globalFacilitator?.titleEn || 'Founder & Lead Somatic Alchemist',
+                            bio: globalFacilitator?.bioShortTh || globalFacilitator?.bioLongTh || 'Certified Sound Healing Practitioner and Holistic Facial Ritualist.',
+                            avatarUrl: globalFacilitator?.photoUrl || '',
+                            certifications: globalFacilitator?.certifications || []
+                          } : prev.facilitator
+                        }));
+                      }}
+                      className="w-3.5 h-3.5 accent-[#E84D84] rounded"
+                    />
+                    <span>ซิงค์อัตโนมัติกับโปรไฟล์ครูในระบบ</span>
+                  </label>
+                </div>
+
+                {formData.useGlobalFacilitator !== false ? (
+                  /* Global Facilitator Info Preview Card */
+                  <div className="p-3 bg-white rounded-xl border border-[#E8DFD8] flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#FAF0F3] border border-[#F8DDE5] text-[#E84D84] flex items-center justify-center font-bold text-xs flex-shrink-0 overflow-hidden">
+                      {globalFacilitator?.photoUrl ? (
+                        <img 
+                          src={globalFacilitator.photoUrl} 
+                          alt="Facilitator" 
+                          className="w-full h-full object-cover" 
+                        />
+                      ) : (
+                        <span>KB</span>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <h5 className="font-bold text-xs text-[#1E1E1E] truncate">
+                          {globalFacilitator?.nameTh || globalFacilitator?.nameEn || 'Kru Beever (Supapit)'}
+                        </h5>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold whitespace-nowrap">
+                          ✓ ซิงค์กับระบบ
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#E84D84] font-medium truncate">
+                        {globalFacilitator?.titleTh || globalFacilitator?.titleEn || 'Founder & Lead Somatic Alchemist'}
+                      </p>
+                      <p className="text-[10px] text-[#777] line-clamp-2 mt-0.5">
+                        {globalFacilitator?.bioShortTh || globalFacilitator?.bioLongTh || 'Certified Sound Healing Practitioner and Holistic Facial Ritualist.'}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  /* Custom Facilitator Override Inputs */
+                  <div className="space-y-2.5 pt-1">
+                    <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800">
+                      ℹ️ กำหนดครูผู้สอนเฉพาะอีเวนท์นี้ (เช่น วิทยากรรับเชิญ หรือ Guest Facilitator)
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-semibold text-[#666] mb-0.5">ชื่อครูผู้สอน (Name)</label>
+                        <input
+                          type="text"
+                          value={formData.facilitator?.name || ''}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            facilitator: {
+                              name: e.target.value,
+                              role: prev.facilitator?.role || '',
+                              bio: prev.facilitator?.bio || '',
+                              certifications: prev.facilitator?.certifications || []
+                            }
+                          }))}
+                          placeholder="เช่น Kru Beever / Guest Teacher"
+                          className="w-full px-3 py-1.5 bg-white rounded-lg border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-[#666] mb-0.5">ตำแหน่ง / บทบาท (Role / Title)</label>
+                        <input
+                          type="text"
+                          value={formData.facilitator?.role || ''}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            facilitator: {
+                              name: prev.facilitator?.name || '',
+                              role: e.target.value,
+                              bio: prev.facilitator?.bio || '',
+                              certifications: prev.facilitator?.certifications || []
+                            }
+                          }))}
+                          placeholder="เช่น Lead Sound Alchemist"
+                          className="w-full px-3 py-1.5 bg-white rounded-lg border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-[#666] mb-0.5">ประวัติย่อ (Bio)</label>
+                      <textarea
+                        rows={2}
+                        value={formData.facilitator?.bio || ''}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          facilitator: {
+                            name: prev.facilitator?.name || '',
+                            role: prev.facilitator?.role || '',
+                            bio: e.target.value,
+                            certifications: prev.facilitator?.certifications || []
+                          }
+                        }))}
+                        placeholder="ประวัติย่อและศาสตร์ความเชี่ยวชาญ..."
+                        className="w-full px-3 py-1.5 bg-white rounded-lg border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Row 10: Sensory Notes / Tools (สัมผัสและเครื่องมือบำบัด) */}
+              <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#EFE8E1] space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[11px] font-bold text-[#1E1E1E] flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#E84D84]" />
+                    <span>สัมผัสและเครื่องมือบำบัด (Sensory Notes / Tools)</span>
+                  </label>
+                  <span className="text-[10px] text-[#888]">แสดงเป็นแท็กในหน้ารายละเอียด</span>
+                </div>
+
+                {/* Current Sensory Tags List */}
+                <div className="flex flex-wrap gap-1.5 min-h-[30px] p-2 bg-white rounded-xl border border-[#E5DFD7]">
+                  {(formData.sensoryNotes || []).length === 0 ? (
+                    <span className="text-[11px] text-[#999] italic py-0.5">ยังไม่มีรายการสัมผัส/เครื่องมือ กรุณาพิมพ์เพิ่มด้านล่าง</span>
+                  ) : (
+                    formData.sensoryNotes?.map((note, idx) => (
+                      <span 
+                        key={idx} 
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#FAF0F3] text-[#A82B5A] border border-[#F8DDE5] rounded-full text-xs font-medium"
+                      >
+                        <span>{note}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSensoryNote(idx)}
+                          className="hover:text-rose-700 hover:bg-rose-100 rounded-full p-0.5 cursor-pointer"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))
+                  )}
+                </div>
+
+                {/* Add new sensory note input */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newSensoryNoteInput}
+                    onChange={(e) => setNewSensoryNoteInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddSensoryNote(newSensoryNoteInput);
+                      }
+                    }}
+                    placeholder="พิมพ์เครื่องมือบำบัด เช่น Tibetan Singing Bowls แล้วกด Enter"
+                    className="flex-1 px-3 py-2 bg-white rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleAddSensoryNote(newSensoryNoteInput)}
+                    className="px-3.5 py-2 bg-[#E84D84] text-white font-bold rounded-xl text-xs flex items-center gap-1 cursor-pointer hover:bg-[#D43D73] transition-colors flex-shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>เพิ่ม</span>
+                  </button>
+                </div>
+
+                {/* Quick Add Suggestions */}
+                <div className="pt-1">
+                  <span className="text-[10px] text-[#777] block mb-1">ตัวเลือกแนะนำ (คลิกเพื่อเพิ่มด่วน):</span>
+                  <div className="flex flex-wrap gap-1">
+                    {POPULAR_SENSORY_NOTES.map((suggested, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleAddSensoryNote(suggested)}
+                        className="px-2 py-0.5 bg-[#FAF7F5] hover:bg-[#FCE3EB] hover:text-[#A82B5A] border border-[#E5DFD7] hover:border-[#F8DDE5] rounded-md text-[10px] text-[#666] transition-colors cursor-pointer"
+                      >
+                        + {suggested}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 11: Key Benefits (สิ่งที่คุณจะได้รับ) */}
+              <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#EFE8E1] space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[11px] font-bold text-[#1E1E1E] flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#E84D84]" />
+                    <span>สิ่งที่คุณจะได้รับ (Key Benefits)</span>
+                  </label>
+                  <span className="text-[10px] text-[#888]">แสดงเป็นเช็กลิสต์ในหน้ารายละเอียด</span>
+                </div>
+
+                {/* Current Benefits List */}
+                <div className="space-y-1.5 p-2 bg-white rounded-xl border border-[#E5DFD7]">
+                  {(formData.benefits || []).length === 0 ? (
+                    <span className="text-[11px] text-[#999] italic py-0.5 block">ยังไม่มีรายการสิ่งที่จะได้รับ กรุณาพิมพ์เพิ่มด้านล่าง</span>
+                  ) : (
+                    formData.benefits?.map((benefit, idx) => (
+                      <div 
+                        key={idx} 
+                        className="flex items-center justify-between gap-2 px-2.5 py-1.5 bg-[#FAF8F5] rounded-lg border border-[#EFE8E1] text-xs text-[#333]"
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <Check className="w-3.5 h-3.5 text-[#E84D84] flex-shrink-0" />
+                          <span className="truncate">{benefit}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveBenefit(idx)}
+                          className="text-[#999] hover:text-rose-600 p-0.5 cursor-pointer flex-shrink-0"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Add new benefit input */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newBenefitInput}
+                    onChange={(e) => setNewBenefitInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddBenefit(newBenefitInput);
+                      }
+                    }}
+                    placeholder="พิมพ์ผลลัพธ์ที่จะได้รับ เช่น คืนสมดุลให้ร่างกายและจิตใจ แล้วกด Enter"
+                    className="flex-1 px-3 py-2 bg-white rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleAddBenefit(newBenefitInput)}
+                    className="px-3.5 py-2 bg-[#E84D84] text-white font-bold rounded-xl text-xs flex items-center gap-1 cursor-pointer hover:bg-[#D43D73] transition-colors flex-shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>เพิ่ม</span>
+                  </button>
+                </div>
+
+                {/* Quick Add Benefit Suggestions */}
+                <div className="pt-1">
+                  <span className="text-[10px] text-[#777] block mb-1">ตัวเลือกแนะนำ (คลิกเพื่อเพิ่มด่วน):</span>
+                  <div className="flex flex-wrap gap-1">
+                    {POPULAR_BENEFITS.map((suggested, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleAddBenefit(suggested)}
+                        className="px-2 py-0.5 bg-[#FAF7F5] hover:bg-[#FCE3EB] hover:text-[#A82B5A] border border-[#E5DFD7] hover:border-[#F8DDE5] rounded-md text-[10px] text-[#666] transition-colors cursor-pointer"
+                      >
+                        + {suggested}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 12: Preparation Tips (คำแนะนำการเตรียมตัว) */}
+              <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#EFE8E1] space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[11px] font-bold text-[#1E1E1E] flex items-center gap-1.5">
+                    <Heart className="w-3.5 h-3.5 text-[#E84D84]" />
+                    <span>คำแนะนำการเตรียมตัว (Preparation Tips - Optional)</span>
+                  </label>
+                  <span className="text-[10px] text-[#888]">คำแนะนำสำหรับผู้เข้าร่วมกิจกรรม</span>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 min-h-[30px] p-2 bg-white rounded-xl border border-[#E5DFD7]">
+                  {(formData.preparationTips || []).length === 0 ? (
+                    <span className="text-[11px] text-[#999] italic py-0.5">ยังไม่มีคำแนะนำการเตรียมตัว</span>
+                  ) : (
+                    formData.preparationTips?.map((tip, idx) => (
+                      <span 
+                        key={idx} 
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#FAF7F5] text-[#555] border border-[#E5DFD7] rounded-full text-xs"
+                      >
+                        <span>{tip}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePrepTip(idx)}
+                          className="hover:text-rose-700 rounded-full p-0.5 cursor-pointer"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newPrepTipInput}
+                    onChange={(e) => setNewPrepTipInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddPrepTip(newPrepTipInput);
+                      }
+                    }}
+                    placeholder="เช่น สวมใส่ชุดหลวมสบาย ไม่รัดแน่น"
+                    className="flex-1 px-3 py-2 bg-white rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleAddPrepTip(newPrepTipInput)}
+                    className="px-3.5 py-2 bg-[#FAF0F3] hover:bg-[#FCE3EB] text-[#E84D84] border border-[#F8DDE5] font-bold rounded-xl text-xs flex items-center gap-1 cursor-pointer transition-colors flex-shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>เพิ่ม</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Row 13: Special Star Highlight Toggle */}
               <div className="flex items-center justify-between p-3 rounded-2xl bg-[#FFF9EA] border border-[#FDE6B0]">
                 <div>
                   <span className="font-bold text-xs text-[#996500] block flex items-center gap-1">
@@ -1005,10 +1516,18 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
       )}
 
       {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 px-4 py-2.5 rounded-2xl bg-[#1E1E1E] text-white text-xs font-medium shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
-          <Check className="w-4 h-4 text-[#E84D84]" />
-          <span>{toastMessage}</span>
+      {toastState && (
+        <div className={`fixed bottom-6 right-6 z-50 px-4 py-2.5 rounded-2xl text-white text-xs font-medium shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-200 border ${
+          toastState.type === 'error'
+            ? 'bg-[#991B1B] border-rose-400/30'
+            : 'bg-[#1E1E1E] border-emerald-500/30'
+        }`}>
+          {toastState.type === 'error' ? (
+            <AlertTriangle className="w-4 h-4 text-rose-300 flex-shrink-0" />
+          ) : (
+            <Check className="w-4 h-4 text-[#E84D84] flex-shrink-0" />
+          )}
+          <span>{toastState.message}</span>
         </div>
       )}
     </div>

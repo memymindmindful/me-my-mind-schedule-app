@@ -31,6 +31,7 @@ export interface ScheduleEvent {
   endTime: string; // '10:30 AM'
   durationMinutes: number;
   facilitator: Facilitator;
+  useGlobalFacilitator?: boolean; // When true or undefined, uses live global facilitator profile
   priceThb: number;
   isFree?: boolean; // When true, displays 'ฟรี' / 'FREE'
   capacity: number;
@@ -142,6 +143,8 @@ export interface FacilitatorProfile {
   instagram?: string;
   updatedAt?: string;
 }
+
+export type FacilitatorInfo = FacilitatorProfile;
 
 export interface BranchItem {
   id: string;

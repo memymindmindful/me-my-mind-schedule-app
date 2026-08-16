@@ -389,6 +389,7 @@ export default function App() {
         onClose={() => setActiveEventModal(null)}
         onConfirmBooking={handleConfirmBooking}
         lang={lang}
+        globalFacilitator={studioSettings?.facilitator}
         onShowToast={(msg) => {
           setToastMessage(msg);
           setTimeout(() => setToastMessage(null), 3500);
