@@ -142,7 +142,7 @@ export function openLineWithEmptyMessage(): boolean {
  */
 export function openLineWithMessage(message: string): boolean {
   const encodedMsg = encodeURIComponent(message);
-  const lineUrl = `https://line.me/R/oaMessage/@me.my.mind.mindful/?text=${encodedMsg}`;
+  const lineUrl = `https://line.me/R/oaMessage/@me.my.mind.mindful/?${encodedMsg}`;
 
   try {
     const newWindow = window.open(lineUrl, '_blank');
