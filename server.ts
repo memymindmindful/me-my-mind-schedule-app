@@ -21,9 +21,14 @@ async function startServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Static uploads directory
+  // Static uploads directory (cache for 1 day)
   const uploadsDir = path.resolve(process.cwd(), process.env.UPLOAD_DIR || './public/uploads');
-  app.use('/uploads', express.static(uploadsDir));
+  app.use('/uploads', express.static(uploadsDir, {
+    maxAge: '1d',
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+    }
+  }));
 
   // Request logger
   app.use((req, _res, next) => {
@@ -33,6 +38,9 @@ async function startServer() {
 
   // Health check API
   app.get('/api/health', (_req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.json({
       status: 'ok',
       service: 'Me.My.Mind Schedule API',
@@ -63,8 +71,39 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (_req: Request, res: Response) => {
+
+    // 1. Serve hashed asset files (JS/CSS in /assets with Vite hash in filename) - cache aggressively for 1 year
+    app.use('/assets', express.static(path.join(distPath, 'assets'), {
+      maxAge: '1y',
+      immutable: true,
+      setHeaders: (res) => {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+    }));
+
+    // 2. Serve other root-level static files (favicon, manifest, robots, etc.) with 1 hour cache
+    app.use(express.static(distPath, {
+      index: false, // Don't serve index.html via express.static to avoid caching it
+      maxAge: '1h',
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+          res.setHeader('Pragma', 'no-cache');
+          res.setHeader('Expires', '0');
+        }
+      }
+    }));
+
+    // 3. Serve index.html for SPA routes - NEVER cache (crucial for mobile/LINE browsers to get new build hashes)
+    app.get('*', (req: Request, res: Response, next: NextFunction) => {
+      // Skip API routes that fell through
+      if (req.path.startsWith('/api/')) {
+        return next();
+      }
+
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

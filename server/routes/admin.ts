@@ -8,6 +8,15 @@ import { upload } from '../middleware/upload';
 import { mapRowToEvent } from './events';
 
 export const adminRouter = Router();
+
+// Ensure all admin and settings API responses are never cached
+adminRouter.use((_req: Request, res: Response, next) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 const JWT_SECRET = process.env.JWT_SECRET || 'me_my_mind_mindfulness_jwt_secret_2026_super_secure_key';
 const JWT_EXPIRY = process.env.JWT_EXPIRY || '24h';
 
@@ -367,24 +376,20 @@ export function getAllStudioSettingsFromDb() {
     studioNameEn: 'Me.My.Mind Mindfulness Studio',
     taglineTh: 'Your Daily Rituals of Self-Love',
     taglineEn: 'Your Daily Rituals of Self-Love',
-    sayHiMessageTh: 'สวัสดีค่ะ 👋\n\nเช็คตารางครูบี เลือกวันที่ต้องการ\n แล้วทักแชทมาจองได้เลยค่ะ 💬',
-    sayHiMessageEn: 'Hello there 👋\n\nCheck Kru Beever’s schedule, pick your preferred date\nand chat with us to book your session! 💬',
     logoUrl: '',
     defaultLanguage: 'th',
     currency: 'THB',
     timeFormat: '24h'
   };
-  const studioRes = db.exec("SELECT id, studioNameTh, studioNameEn, taglineTh, taglineEn, logoUrl, defaultLanguage, currency, timeFormat, sayHiMessageTh, sayHiMessageEn FROM studio_info WHERE id = 'default'");
+  const studioRes = db.exec("SELECT id, studioNameTh, studioNameEn, taglineTh, taglineEn, logoUrl, defaultLanguage, currency, timeFormat FROM studio_info WHERE id = 'default'");
   if (studioRes && studioRes.length > 0 && studioRes[0].values.length > 0) {
-    const [id, studioNameTh, studioNameEn, taglineTh, taglineEn, logoUrl, defaultLanguage, currency, timeFormat, sayHiMessageTh, sayHiMessageEn] = studioRes[0].values[0];
+    const [id, studioNameTh, studioNameEn, taglineTh, taglineEn, logoUrl, defaultLanguage, currency, timeFormat] = studioRes[0].values[0];
     studio = {
       id: (id as string) || 'default',
-      studioNameTh: (studioNameTh as string) || 'Me.My.Mind Mindfulness Studio',
-      studioNameEn: (studioNameEn as string) || 'Me.My.Mind Mindfulness Studio',
-      taglineTh: (taglineTh as string) || 'Your Daily Rituals of Self-Love',
-      taglineEn: (taglineEn as string) || 'Your Daily Rituals of Self-Love',
-      sayHiMessageTh: (sayHiMessageTh as string) || 'สวัสดีค่ะ 👋\n\nเช็คตารางครูบี เลือกวันที่ต้องการ\n แล้วทักแชทมาจองได้เลยค่ะ 💬',
-      sayHiMessageEn: (sayHiMessageEn as string) || 'Hello there 👋\n\nCheck Kru Beever’s schedule, pick your preferred date\nand chat with us to book your session! 💬',
+      studioNameTh: studioNameTh !== null && studioNameTh !== undefined ? (studioNameTh as string) : 'Me.My.Mind Mindfulness Studio',
+      studioNameEn: studioNameEn !== null && studioNameEn !== undefined ? (studioNameEn as string) : 'Me.My.Mind Mindfulness Studio',
+      taglineTh: taglineTh !== null && taglineTh !== undefined ? (taglineTh as string) : '',
+      taglineEn: taglineEn !== null && taglineEn !== undefined ? (taglineEn as string) : '',
       logoUrl: (logoUrl as string) || '',
       defaultLanguage: (defaultLanguage as string) || 'th',
       currency: (currency as string) || 'THB',
@@ -556,15 +561,13 @@ adminRouter.post('/admin/settings', upload.single('logo'), (req: Request, res: R
     }
 
     db.run(`
-      INSERT OR REPLACE INTO studio_info (id, studioNameTh, studioNameEn, taglineTh, taglineEn, sayHiMessageTh, sayHiMessageEn, logoUrl, defaultLanguage, currency, timeFormat, updatedAt)
-      VALUES ('default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      INSERT OR REPLACE INTO studio_info (id, studioNameTh, studioNameEn, taglineTh, taglineEn, logoUrl, defaultLanguage, currency, timeFormat, updatedAt)
+      VALUES ('default', ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     `, [
       body.studioNameTh || 'Me.My.Mind Mindfulness Studio',
       body.studioNameEn || 'Me.My.Mind Mindfulness Studio',
-      body.taglineTh || 'Your Daily Rituals of Self-Love',
-      body.taglineEn || 'Your Daily Rituals of Self-Love',
-      body.sayHiMessageTh !== undefined ? body.sayHiMessageTh : 'สวัสดีค่ะ 👋\n\nเช็คตารางครูบี เลือกวันที่ต้องการ\n แล้วทักแชทมาจองได้เลยค่ะ 💬',
-      body.sayHiMessageEn !== undefined ? body.sayHiMessageEn : 'Hello there 👋\n\nCheck Kru Beever’s schedule, pick your preferred date\nand chat with us to book your session! 💬',
+      body.taglineTh !== undefined ? body.taglineTh : 'Your Daily Rituals of Self-Love',
+      body.taglineEn !== undefined ? body.taglineEn : 'Your Daily Rituals of Self-Love',
       logoUrl,
       body.defaultLanguage || 'th',
       body.currency || 'THB',

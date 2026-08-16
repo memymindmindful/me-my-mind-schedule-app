@@ -201,28 +201,6 @@ export function loadStudioSettingsLocal(): AllStudioSettings {
       const parsed = JSON.parse(raw);
       if (parsed && parsed.studio && parsed.facilitator) {
         const studio = { ...DEFAULT_STUDIO_SETTINGS.studio, ...parsed.studio };
-        // Migrate old tagline if still present in cached storage
-        if (
-          !studio.taglineTh ||
-          studio.taglineTh === 'สตูดิโอศาสตร์แห่งเสียง คลื่นความถี่ การบำบัดกล้ามเนื้อใบหน้า และความสงบใจ' ||
-          studio.taglineTh === 'สตูดิโอเพื่อความผ่อนคลายและดูแลสุขภาวะทางใจ'
-        ) {
-          studio.taglineTh = 'Your Daily Rituals of Self-Love';
-        }
-        if (
-          !studio.taglineEn ||
-          studio.taglineEn === 'Somatic sound baths, facial acupressure rituals, and restorative wellness journeys.' ||
-          studio.taglineEn === 'Sanctuary for Nervous System Restoration & Mindful Living'
-        ) {
-          studio.taglineEn = 'Your Daily Rituals of Self-Love';
-        }
-
-        if (studio.sayHiMessageTh === undefined) {
-          studio.sayHiMessageTh = 'สวัสดีค่ะ 👋\n\nเช็คตารางครูบี เลือกวันที่ต้องการ\n แล้วทักแชทมาจองได้เลยค่ะ 💬';
-        }
-        if (studio.sayHiMessageEn === undefined) {
-          studio.sayHiMessageEn = 'Hello there 👋\n\nCheck Kru Beever’s schedule, pick your preferred date\nand chat with us to book your session! 💬';
-        }
 
         return {
           ...DEFAULT_STUDIO_SETTINGS,

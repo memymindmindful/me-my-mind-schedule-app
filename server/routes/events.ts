@@ -3,6 +3,14 @@ import { getDatabase } from '../db';
 
 export const eventsRouter = Router();
 
+// Ensure all /api/events responses are never cached
+eventsRouter.use((_req: Request, res: Response, next) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // Helper to convert database row to ScheduleEvent object
 export function mapRowToEvent(columns: string[], row: any[]) {
   const obj: Record<string, any> = {};

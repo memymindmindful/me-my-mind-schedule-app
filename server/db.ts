@@ -214,37 +214,11 @@ export async function initDatabase(): Promise<Database> {
   `);
 
   // Seed default Studio Info if empty
-  const defaultSayHiTh = 'สวัสดีค่ะ 👋\n\nเช็คตารางครูบี เลือกวันที่ต้องการ\n แล้วทักแชทมาจองได้เลยค่ะ 💬';
-  const defaultSayHiEn = 'Hello there 👋\n\nCheck Kru Beever’s schedule, pick your preferred date\nand chat with us to book your session! 💬';
-
   const checkStudio = db.exec("SELECT COUNT(*) FROM studio_info");
   if (!checkStudio || checkStudio[0]?.values[0]?.[0] === 0) {
     db.run(
-      `INSERT INTO studio_info (id, studioNameTh, studioNameEn, taglineTh, taglineEn, sayHiMessageTh, sayHiMessageEn, defaultLanguage, currency, timeFormat)
-       VALUES ('default', 'Me.My.Mind Mindfulness Studio', 'Me.My.Mind Mindfulness Studio', 'Your Daily Rituals of Self-Love', 'Your Daily Rituals of Self-Love', ?, ?, 'th', 'THB', '24h')`,
-      [defaultSayHiTh, defaultSayHiEn]
-    );
-  } else {
-    // Migrate old tagline & ensure sayHiMessage defaults if null
-    db.run(`
-      UPDATE studio_info 
-      SET taglineTh = 'Your Daily Rituals of Self-Love', taglineEn = 'Your Daily Rituals of Self-Love'
-      WHERE taglineTh = 'สตูดิโอศาสตร์แห่งเสียง คลื่นความถี่ การบำบัดกล้ามเนื้อใบหน้า และความสงบใจ'
-         OR taglineTh = 'สตูดิโอเพื่อความผ่อนคลายและดูแลสุขภาวะทางใจ'
-         OR taglineTh IS NULL
-         OR taglineTh = ''
-    `);
-    db.run(
-      `UPDATE studio_info
-       SET sayHiMessageTh = ?
-       WHERE sayHiMessageTh IS NULL OR sayHiMessageTh = ''`,
-      [defaultSayHiTh]
-    );
-    db.run(
-      `UPDATE studio_info
-       SET sayHiMessageEn = ?
-       WHERE sayHiMessageEn IS NULL OR sayHiMessageEn = ''`,
-      [defaultSayHiEn]
+      `INSERT INTO studio_info (id, studioNameTh, studioNameEn, taglineTh, taglineEn, defaultLanguage, currency, timeFormat)
+       VALUES ('default', 'Me.My.Mind Mindfulness Studio', 'Me.My.Mind Mindfulness Studio', 'Your Daily Rituals of Self-Love', 'Your Daily Rituals of Self-Love', 'th', 'THB', '24h')`
     );
   }
 
