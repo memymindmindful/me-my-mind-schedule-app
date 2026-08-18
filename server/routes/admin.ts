@@ -178,6 +178,17 @@ adminRouter.post('/admin/events', authenticateToken, upload.single('photo'), (re
     const isSpecialStar = body.isSpecialStar === 'true' || body.isSpecialStar === true ? 1 : 0;
     const isFeatured = body.isFeatured === 'true' || body.isFeatured === true ? 1 : 0;
 
+    const rawParams = [
+      id, name, englishName, date, dateDisplay, dateStr,
+      startTime, endTime, timeDisplay, durationMinutes, category,
+      branch, capacity, bookedCount, status, priceThb, isFree, level,
+      description, locationDetails, posterUrl, posterTag, subtitle,
+      facilitatorName, facilitatorRole, facilitatorBio, useGlobalFacilitator,
+      sensoryNotes, benefits, preparationTips, adminNote,
+      isSpecialStar, isFeatured
+    ];
+    const params = rawParams.map(v => (v === undefined ? null : v));
+
     db.run(`
       INSERT INTO events (
         id, name, englishName, date, dateDisplay, dateStr,
@@ -188,15 +199,7 @@ adminRouter.post('/admin/events', authenticateToken, upload.single('photo'), (re
         sensoryNotes, benefits, preparationTips, adminNote,
         isSpecialStar, isFeatured, createdAt, updatedAt
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-    `, [
-      id, name, englishName, date, dateDisplay, dateStr,
-      startTime, endTime, timeDisplay, durationMinutes, category,
-      branch, capacity, bookedCount, status, priceThb, isFree, level,
-      description, locationDetails, posterUrl, posterTag, subtitle,
-      facilitatorName, facilitatorRole, facilitatorBio, useGlobalFacilitator,
-      sensoryNotes, benefits, preparationTips, adminNote,
-      isSpecialStar, isFeatured
-    ]);
+    `, params);
 
     saveDatabase();
 
@@ -263,6 +266,45 @@ adminRouter.put('/admin/events/:id', authenticateToken, upload.single('photo'), 
     const benefits = body.benefits !== undefined ? (typeof body.benefits === 'string' ? body.benefits : JSON.stringify(body.benefits)) : null;
     const preparationTips = body.preparationTips !== undefined ? (typeof body.preparationTips === 'string' ? body.preparationTips : JSON.stringify(body.preparationTips)) : null;
 
+    const rawParams = [
+      body.name,
+      body.englishName,
+      body.date,
+      body.dateDisplay,
+      body.dateStr,
+      body.startTime,
+      body.endTime,
+      body.timeDisplay,
+      body.durationMinutes ? parseInt(body.durationMinutes, 10) : null,
+      body.category,
+      body.branch,
+      body.capacity ? parseInt(body.capacity, 10) : null,
+      body.bookedCount ? parseInt(body.bookedCount, 10) : null,
+      body.status,
+      (body.priceThb !== undefined && body.priceThb !== '' && !Number.isNaN(parseInt(body.priceThb, 10)))
+        ? parseInt(body.priceThb, 10)
+        : null,
+      body.isFree !== undefined ? (body.isFree === 'true' || body.isFree === true || body.isFree === 1 || Number(body.priceThb) === 0 ? 1 : 0) : null,
+      body.level,
+      body.description,
+      body.locationDetails,
+      posterUrl,
+      body.posterTag,
+      body.subtitle,
+      facilitatorName,
+      facilitatorRole,
+      facilitatorBio,
+      useGlobalFacilitator,
+      sensoryNotes,
+      benefits,
+      preparationTips,
+      body.adminNote,
+      body.isSpecialStar !== undefined ? (body.isSpecialStar === 'true' || body.isSpecialStar === true ? 1 : 0) : null,
+      body.isFeatured !== undefined ? (body.isFeatured === 'true' || body.isFeatured === true ? 1 : 0) : null,
+      id
+    ];
+    const params = rawParams.map(v => (v === undefined ? null : v));
+
     db.run(`
       UPDATE events SET
         name = COALESCE(?, name),
@@ -299,43 +341,7 @@ adminRouter.put('/admin/events/:id', authenticateToken, upload.single('photo'), 
         isFeatured = COALESCE(?, isFeatured),
         updatedAt = datetime('now')
       WHERE id = ?
-    `, [
-      body.name,
-      body.englishName,
-      body.date,
-      body.dateDisplay,
-      body.dateStr,
-      body.startTime,
-      body.endTime,
-      body.timeDisplay,
-      body.durationMinutes ? parseInt(body.durationMinutes, 10) : null,
-      body.category,
-      body.branch,
-      body.capacity ? parseInt(body.capacity, 10) : null,
-      body.bookedCount ? parseInt(body.bookedCount, 10) : null,
-      body.status,
-      (body.priceThb !== undefined && body.priceThb !== '' && !Number.isNaN(parseInt(body.priceThb, 10)))
-        ? parseInt(body.priceThb, 10)
-        : null,
-      body.isFree !== undefined ? (body.isFree === 'true' || body.isFree === true || body.isFree === 1 || Number(body.priceThb) === 0 ? 1 : 0) : null,
-      body.level,
-      body.description,
-      body.locationDetails,
-      posterUrl,
-      body.posterTag,
-      body.subtitle,
-      facilitatorName,
-      facilitatorRole,
-      facilitatorBio,
-      useGlobalFacilitator,
-      sensoryNotes,
-      benefits,
-      preparationTips,
-      body.adminNote,
-      body.isSpecialStar !== undefined ? (body.isSpecialStar === 'true' || body.isSpecialStar === true ? 1 : 0) : null,
-      body.isFeatured !== undefined ? (body.isFeatured === 'true' || body.isFeatured === true ? 1 : 0) : null,
-      id
-    ]);
+    `, params);
 
     saveDatabase();
 
@@ -612,10 +618,7 @@ adminRouter.post('/admin/settings', upload.single('logo'), (req: Request, res: R
       logoUrl = body.logoUrl;
     }
 
-    db.run(`
-      INSERT OR REPLACE INTO studio_info (id, studioNameTh, studioNameEn, taglineTh, taglineEn, logoUrl, defaultLanguage, currency, timeFormat, updatedAt)
-      VALUES ('default', ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-    `, [
+    const studioParams = [
       body.studioNameTh || 'Me.My.Mind Mindfulness Studio',
       body.studioNameEn || 'Me.My.Mind Mindfulness Studio',
       body.taglineTh !== undefined ? body.taglineTh : 'Your Daily Rituals of Self-Love',
@@ -624,14 +627,16 @@ adminRouter.post('/admin/settings', upload.single('logo'), (req: Request, res: R
       body.defaultLanguage || 'th',
       body.currency || 'THB',
       body.timeFormat || '24h'
-    ]);
+    ].map(v => (v === undefined ? null : v));
+
+    db.run(`
+      INSERT OR REPLACE INTO studio_info (id, studioNameTh, studioNameEn, taglineTh, taglineEn, logoUrl, defaultLanguage, currency, timeFormat, updatedAt)
+      VALUES ('default', ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `, studioParams);
 
     // Also update contact if provided in the same request
     if (body.lineOa !== undefined || body.email !== undefined || body.phone !== undefined) {
-      db.run(`
-        INSERT OR REPLACE INTO contact_info (id, lineOa, lineUrl, email, phone, instagram, facebook, website, updatedAt)
-        VALUES ('default', ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-      `, [
+      const contactParams = [
         body.lineOa || '@me.my.mind.mindful',
         body.lineUrl || `https://line.me/R/oaMessage/${body.lineOa || '@me.my.mind.mindful'}`,
         body.email || '',
@@ -639,7 +644,12 @@ adminRouter.post('/admin/settings', upload.single('logo'), (req: Request, res: R
         body.instagram || '',
         body.facebook || '',
         body.website || ''
-      ]);
+      ].map(v => (v === undefined ? null : v));
+
+      db.run(`
+        INSERT OR REPLACE INTO contact_info (id, lineOa, lineUrl, email, phone, instagram, facebook, website, updatedAt)
+        VALUES ('default', ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      `, contactParams);
     }
 
     saveDatabase();
@@ -685,10 +695,7 @@ adminRouter.post('/admin/facilitator', upload.single('photo'), (req: Request, re
       certsJson = JSON.stringify(body.certifications);
     }
 
-    db.run(`
-      INSERT OR REPLACE INTO facilitator (id, nameTh, nameEn, titleTh, titleEn, photoUrl, bioShortTh, bioShortEn, bioLongTh, bioLongEn, certifications, lineOa, email, phone, instagram, updatedAt)
-      VALUES ('default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-    `, [
+    const facilitatorParams = [
       body.nameTh || 'Kru Beever (ครูบีเวอร์)',
       body.nameEn || 'Kru Beever (Supapit)',
       body.titleTh || 'ผู้ก่อตั้ง & ผู้เชี่ยวชาญการบำบัด Somatic Alchemy',
@@ -703,7 +710,12 @@ adminRouter.post('/admin/facilitator', upload.single('photo'), (req: Request, re
       body.email || '',
       body.phone || '',
       body.instagram || ''
-    ]);
+    ].map(v => (v === undefined ? null : v));
+
+    db.run(`
+      INSERT OR REPLACE INTO facilitator (id, nameTh, nameEn, titleTh, titleEn, photoUrl, bioShortTh, bioShortEn, bioLongTh, bioLongEn, certifications, lineOa, email, phone, instagram, updatedAt)
+      VALUES ('default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `, facilitatorParams);
 
     saveDatabase();
     res.json({
@@ -738,10 +750,7 @@ adminRouter.post('/admin/branches', upload.single('photo'), (req: Request, res: 
     const id = body.id || `branch-${uuidv4().slice(0, 8)}`;
     const photoUrl = file ? `/uploads/${file.filename}` : (body.photoUrl || '');
 
-    db.run(`
-      INSERT OR REPLACE INTO branches (id, branchKey, nameTh, nameEn, taglineTh, taglineEn, addressTh, addressEn, landmarkTh, landmarkEn, dotColor, pillBg, textColor, photoUrl, isActive, displayOrder, createdAt, updatedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-    `, [
+    const branchParams = [
       id,
       body.branchKey || 'Nakhonsawan',
       body.nameTh || '',
@@ -758,7 +767,12 @@ adminRouter.post('/admin/branches', upload.single('photo'), (req: Request, res: 
       photoUrl,
       body.isActive === false || body.isActive === 'false' ? 0 : 1,
       Number(body.displayOrder || 0)
-    ]);
+    ].map(v => (v === undefined ? null : v));
+
+    db.run(`
+      INSERT OR REPLACE INTO branches (id, branchKey, nameTh, nameEn, taglineTh, taglineEn, addressTh, addressEn, landmarkTh, landmarkEn, dotColor, pillBg, textColor, photoUrl, isActive, displayOrder, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    `, branchParams);
 
     saveDatabase();
     res.json({ success: true, message: 'Branch saved', data: { id, photoUrl } });
@@ -784,6 +798,25 @@ adminRouter.put('/admin/branches/:id', upload.single('photo'), (req: Request, re
       photoUrl = body.photoUrl;
     }
 
+    const branchParams = [
+      body.branchKey,
+      body.nameTh,
+      body.nameEn,
+      body.taglineTh,
+      body.taglineEn,
+      body.addressTh,
+      body.addressEn,
+      body.landmarkTh,
+      body.landmarkEn,
+      body.dotColor,
+      body.pillBg,
+      body.textColor,
+      photoUrl,
+      body.isActive !== undefined ? (body.isActive === true || body.isActive === 'true' ? 1 : 0) : null,
+      body.displayOrder !== undefined ? Number(body.displayOrder) : null,
+      id
+    ].map(v => (v === undefined ? null : v));
+
     db.run(`
       UPDATE branches SET
         branchKey = COALESCE(?, branchKey),
@@ -803,24 +836,7 @@ adminRouter.put('/admin/branches/:id', upload.single('photo'), (req: Request, re
         displayOrder = COALESCE(?, displayOrder),
         updatedAt = datetime('now')
       WHERE id = ?
-    `, [
-      body.branchKey,
-      body.nameTh,
-      body.nameEn,
-      body.taglineTh,
-      body.taglineEn,
-      body.addressTh,
-      body.addressEn,
-      body.landmarkTh,
-      body.landmarkEn,
-      body.dotColor,
-      body.pillBg,
-      body.textColor,
-      photoUrl,
-      body.isActive !== undefined ? (body.isActive === true || body.isActive === 'true' ? 1 : 0) : null,
-      body.displayOrder !== undefined ? Number(body.displayOrder) : null,
-      id
-    ]);
+    `, branchParams);
 
     saveDatabase();
     res.json({ success: true, message: 'Branch updated', data: { id, photoUrl } });
@@ -864,10 +880,7 @@ adminRouter.post('/admin/services', upload.single('photo'), (req: Request, res: 
     const id = body.id || `srv-${uuidv4().slice(0, 8)}`;
     const photoUrl = file ? `/uploads/${file.filename}` : (body.photoUrl || '');
 
-    db.run(`
-      INSERT OR REPLACE INTO services (id, nameTh, nameEn, category, descriptionTh, descriptionEn, basePrice, durationMinutes, photoUrl, isActive, displayOrder, createdAt, updatedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-    `, [
+    const serviceParams = [
       id,
       body.nameTh || '',
       body.nameEn || '',
@@ -879,7 +892,12 @@ adminRouter.post('/admin/services', upload.single('photo'), (req: Request, res: 
       photoUrl,
       body.isActive === false || body.isActive === 'false' ? 0 : 1,
       Number(body.displayOrder || 0)
-    ]);
+    ].map(v => (v === undefined ? null : v));
+
+    db.run(`
+      INSERT OR REPLACE INTO services (id, nameTh, nameEn, category, descriptionTh, descriptionEn, basePrice, durationMinutes, photoUrl, isActive, displayOrder, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    `, serviceParams);
 
     saveDatabase();
     res.json({ success: true, message: 'Service saved', data: { id, photoUrl } });
@@ -905,6 +923,20 @@ adminRouter.put('/admin/services/:id', upload.single('photo'), (req: Request, re
       photoUrl = body.photoUrl;
     }
 
+    const serviceParams = [
+      body.nameTh,
+      body.nameEn,
+      body.category,
+      body.descriptionTh,
+      body.descriptionEn,
+      body.basePrice !== undefined ? Number(body.basePrice) : null,
+      body.durationMinutes !== undefined ? Number(body.durationMinutes) : null,
+      photoUrl,
+      body.isActive !== undefined ? (body.isActive === true || body.isActive === 'true' ? 1 : 0) : null,
+      body.displayOrder !== undefined ? Number(body.displayOrder) : null,
+      id
+    ].map(v => (v === undefined ? null : v));
+
     db.run(`
       UPDATE services SET
         nameTh = COALESCE(?, nameTh),
@@ -919,19 +951,7 @@ adminRouter.put('/admin/services/:id', upload.single('photo'), (req: Request, re
         displayOrder = COALESCE(?, displayOrder),
         updatedAt = datetime('now')
       WHERE id = ?
-    `, [
-      body.nameTh,
-      body.nameEn,
-      body.category,
-      body.descriptionTh,
-      body.descriptionEn,
-      body.basePrice !== undefined ? Number(body.basePrice) : null,
-      body.durationMinutes !== undefined ? Number(body.durationMinutes) : null,
-      photoUrl,
-      body.isActive !== undefined ? (body.isActive === true || body.isActive === 'true' ? 1 : 0) : null,
-      body.displayOrder !== undefined ? Number(body.displayOrder) : null,
-      id
-    ]);
+    `, serviceParams);
 
     saveDatabase();
     res.json({ success: true, message: 'Service updated', data: { id, photoUrl } });
@@ -982,13 +1002,7 @@ adminRouter.post('/admin/bars/:year/:month', (req: Request, res: Response) => {
       const barId = `bar-${year}-${month}-${d}`;
       const specialStatus = barData.specialStatus;
 
-      db.run(`
-        INSERT INTO month_bars (
-          id, year, month, dayNum, branch, tourCity, isPinkPill, isBrownPill, pillPosition,
-          hasSpecialStar, specialStatusType, specialStatusLabelTh, specialStatusLabelEn,
-          specialStatusSubTh, specialStatusSubEn, specialStatusBadgeBg, specialStatusBadgeText, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-      `, [
+      const barParams = [
         barId,
         year,
         month,
@@ -1006,7 +1020,15 @@ adminRouter.post('/admin/bars/:year/:month', (req: Request, res: Response) => {
         specialStatus?.subEn || null,
         specialStatus?.badgeBg || null,
         specialStatus?.badgeText || null
-      ]);
+      ].map(v => (v === undefined ? null : v));
+
+      db.run(`
+        INSERT INTO month_bars (
+          id, year, month, dayNum, branch, tourCity, isPinkPill, isBrownPill, pillPosition,
+          hasSpecialStar, specialStatusType, specialStatusLabelTh, specialStatusLabelEn,
+          specialStatusSubTh, specialStatusSubEn, specialStatusBadgeBg, specialStatusBadgeText, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      `, barParams);
     });
 
     saveDatabase();
