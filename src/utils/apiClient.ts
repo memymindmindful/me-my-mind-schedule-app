@@ -74,13 +74,20 @@ export async function apiFetchMonthBars(year: number, month: number): Promise<Re
 }
 
 /**
- * Helper to handle fetch responses and handle 401 token expiration
+ * Helper to handle fetch responses and handle 401/403 token expiration
  */
 async function handleResponse<T = any>(res: Response): Promise<ApiResponse<T>> {
   try {
     const json = await res.json();
     if (!res.ok) {
-      if (res.status === 401 || json.code === 'INVALID_TOKEN' || json.code === 'NO_TOKEN') {
+      if (
+        res.status === 401 ||
+        res.status === 403 ||
+        json.code === 'INVALID_TOKEN' ||
+        json.code === 'NO_TOKEN' ||
+        json.code === 'UNAUTHORIZED' ||
+        json.code === 'FORBIDDEN'
+      ) {
         window.dispatchEvent(new CustomEvent('mmm_auth_expired', { detail: { error: json.error || 'Session expired' } }));
       }
       return {

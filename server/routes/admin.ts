@@ -81,6 +81,7 @@ adminRouter.post('/admin/login', (req: Request, res: Response) => {
       }
     });
   } catch (error: any) {
+    console.error('[POST /admin/login]', error);
     res.status(500).json({
       success: false,
       error: error.message || 'Internal Server Error',
@@ -111,6 +112,7 @@ adminRouter.get('/admin/events', authenticateToken, (_req: AuthRequest, res: Res
       data: events
     });
   } catch (error: any) {
+    console.error('[GET /admin/events]', error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -204,6 +206,7 @@ adminRouter.post('/admin/events', authenticateToken, upload.single('photo'), (re
       data: { id, posterUrl }
     });
   } catch (error: any) {
+    console.error('[POST /admin/events]', error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -311,7 +314,9 @@ adminRouter.put('/admin/events/:id', authenticateToken, upload.single('photo'), 
       body.capacity ? parseInt(body.capacity, 10) : null,
       body.bookedCount ? parseInt(body.bookedCount, 10) : null,
       body.status,
-      body.priceThb !== undefined ? parseInt(body.priceThb, 10) : null,
+      (body.priceThb !== undefined && body.priceThb !== '' && !Number.isNaN(parseInt(body.priceThb, 10)))
+        ? parseInt(body.priceThb, 10)
+        : null,
       body.isFree !== undefined ? (body.isFree === 'true' || body.isFree === true || body.isFree === 1 || Number(body.priceThb) === 0 ? 1 : 0) : null,
       body.level,
       body.description,
@@ -340,6 +345,7 @@ adminRouter.put('/admin/events/:id', authenticateToken, upload.single('photo'), 
       data: { id, posterUrl }
     });
   } catch (error: any) {
+    console.error('[PUT /admin/events/:id]', error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -365,6 +371,7 @@ adminRouter.delete('/admin/events/:id', authenticateToken, (req: AuthRequest, re
       message: 'Event deleted successfully'
     });
   } catch (error: any) {
+    console.error('[DELETE /admin/events/:id]', error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -401,6 +408,7 @@ adminRouter.post('/admin/events/:id/increment-booked', authenticateToken, (req: 
       data: { bookedCount: newBooked, capacity, status: newStatus }
     });
   } catch (error: any) {
+    console.error('[POST /admin/events/:id/increment-booked]', error);
     res.status(500).json({ success: false, error: error.message, code: 'SERVER_ERROR' });
   }
 });
@@ -569,6 +577,7 @@ adminRouter.get('/settings', (_req: Request, res: Response) => {
     const data = getAllStudioSettingsFromDb();
     res.json({ success: true, data });
   } catch (error: any) {
+    console.error('[GET /settings]', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -578,6 +587,7 @@ adminRouter.get('/admin/settings', (_req: Request, res: Response) => {
     const data = getAllStudioSettingsFromDb();
     res.json({ success: true, data });
   } catch (error: any) {
+    console.error('[GET /admin/settings]', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -639,6 +649,7 @@ adminRouter.post('/admin/settings', upload.single('logo'), (req: Request, res: R
       data: { logoUrl }
     });
   } catch (error: any) {
+    console.error('[POST /admin/settings]', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -701,6 +712,7 @@ adminRouter.post('/admin/facilitator', upload.single('photo'), (req: Request, re
       data: { photoUrl }
     });
   } catch (error: any) {
+    console.error('[POST /admin/facilitator]', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -713,6 +725,7 @@ adminRouter.get('/admin/branches', (_req: Request, res: Response) => {
     const data = getAllStudioSettingsFromDb().branches;
     res.json({ success: true, data });
   } catch (error: any) {
+    console.error('[GET /admin/branches]', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -750,6 +763,7 @@ adminRouter.post('/admin/branches', upload.single('photo'), (req: Request, res: 
     saveDatabase();
     res.json({ success: true, message: 'Branch saved', data: { id, photoUrl } });
   } catch (error: any) {
+    console.error('[POST /admin/branches]', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -811,6 +825,7 @@ adminRouter.put('/admin/branches/:id', upload.single('photo'), (req: Request, re
     saveDatabase();
     res.json({ success: true, message: 'Branch updated', data: { id, photoUrl } });
   } catch (error: any) {
+    console.error('[PUT /admin/branches/:id]', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -823,6 +838,7 @@ adminRouter.delete('/admin/branches/:id', (req: Request, res: Response) => {
     saveDatabase();
     res.json({ success: true, message: 'Branch deleted' });
   } catch (error: any) {
+    console.error('[DELETE /admin/branches/:id]', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -835,6 +851,7 @@ adminRouter.get('/admin/services', (_req: Request, res: Response) => {
     const data = getAllStudioSettingsFromDb().services;
     res.json({ success: true, data });
   } catch (error: any) {
+    console.error('[GET /admin/services]', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -867,6 +884,7 @@ adminRouter.post('/admin/services', upload.single('photo'), (req: Request, res: 
     saveDatabase();
     res.json({ success: true, message: 'Service saved', data: { id, photoUrl } });
   } catch (error: any) {
+    console.error('[POST /admin/services]', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -918,6 +936,7 @@ adminRouter.put('/admin/services/:id', upload.single('photo'), (req: Request, re
     saveDatabase();
     res.json({ success: true, message: 'Service updated', data: { id, photoUrl } });
   } catch (error: any) {
+    console.error('[PUT /admin/services/:id]', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -930,6 +949,7 @@ adminRouter.delete('/admin/services/:id', (req: Request, res: Response) => {
     saveDatabase();
     res.json({ success: true, message: 'Service deleted' });
   } catch (error: any) {
+    console.error('[DELETE /admin/services/:id]', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -992,6 +1012,7 @@ adminRouter.post('/admin/bars/:year/:month', (req: Request, res: Response) => {
     saveDatabase();
     res.json({ success: true, message: 'Month bars saved successfully to database' });
   } catch (error: any) {
+    console.error('[POST /admin/bars/:year/:month]', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1024,6 +1045,7 @@ adminRouter.post('/admin/verify-password', (req: Request, res: Response) => {
       res.status(401).json({ success: false, verified: false, error: 'Invalid password' });
     }
   } catch (error: any) {
+    console.error('[POST /admin/verify-password]', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1081,6 +1103,7 @@ adminRouter.post('/admin/change-password', authenticateToken, (req: AuthRequest,
 
     res.status(400).json({ success: false, error: 'No changes requested' });
   } catch (error: any) {
+    console.error('[POST /admin/change-password]', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1124,6 +1147,7 @@ adminRouter.post('/admin/reset-data', (req: Request, res: Response) => {
 
     res.json({ success: true, message: 'Reset completed', defaultBranch: 'Nakhonsawan' });
   } catch (error: any) {
+    console.error('[POST /admin/reset-data]', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
