@@ -36,6 +36,7 @@ interface AdminEventsManagerProps {
   currentYear: number;
   currentMonth: number;
   onDataChanged: () => void;
+  onMonthChange?: (year: number, month: number) => void;
 }
 
 const DEFAULT_EVENT_FORM: Partial<ScheduleEvent> = {
@@ -92,7 +93,8 @@ const POPULAR_BENEFITS = [
 export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
   currentYear,
   currentMonth,
-  onDataChanged
+  onDataChanged,
+  onMonthChange
 }) => {
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
   const monthStr = String(currentMonth + 1).padStart(2, '0');
@@ -105,14 +107,40 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<ScheduleEvent>>(DEFAULT_EVENT_FORM);
   const [formDayNum, setFormDayNum] = useState<number>(4);
+  const [formMonthNum, setFormMonthNum] = useState<number>(currentMonth + 1); // 1-12
+  const [formYearNum, setFormYearNum] = useState<number>(currentYear);
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>('');
   const [toastState, setToastState] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // Cross-Month Duplicate State
+  const [duplicatingEvent, setDuplicatingEvent] = useState<ScheduleEvent | null>(null);
+  const [duplicateTargetMonths, setDuplicateTargetMonths] = useState<{ year: number; month: number }[]>([]);
+  const [isDuplicatingLoading, setIsDuplicatingLoading] = useState(false);
 
   // Tag inputs state
   const [newSensoryNoteInput, setNewSensoryNoteInput] = useState('');
   const [newBenefitInput, setNewBenefitInput] = useState('');
   const [newPrepTipInput, setNewPrepTipInput] = useState('');
+
+  // Calculate days in currently selected form month/year
+  const daysInFormMonth = new Date(formYearNum, formMonthNum, 0).getDate();
+
+  const handleFormMonthChange = (newMonth: number) => {
+    setFormMonthNum(newMonth);
+    const maxDays = new Date(formYearNum, newMonth, 0).getDate();
+    if (formDayNum > maxDays) {
+      setFormDayNum(maxDays);
+    }
+  };
+
+  const handleFormYearChange = (newYear: number) => {
+    setFormYearNum(newYear);
+    const maxDays = new Date(newYear, formMonthNum, 0).getDate();
+    if (formDayNum > maxDays) {
+      setFormDayNum(maxDays);
+    }
+  };
 
   // Load events and global facilitator profile
   const refreshEvents = async () => {
@@ -255,6 +283,8 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     setSelectedPhoto(null);
     setPhotoPreview('');
     setFormDayNum(day);
+    setFormMonthNum(currentMonth + 1);
+    setFormYearNum(currentYear);
     setNewSensoryNoteInput('');
     setNewBenefitInput('');
     setNewPrepTipInput('');
@@ -267,6 +297,7 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
       certifications: globalFacilitator?.certifications || []
     };
 
+    const targetMonthStr = String(currentMonth + 1).padStart(2, '0');
     setFormData({
       ...DEFAULT_EVENT_FORM,
       useGlobalFacilitator: true,
@@ -275,8 +306,8 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
       benefits: ['คืนสมดุลให้ร่างกายและจิตใจ', 'ผ่อนคลายกล้ามเนื้อและระบบประสาท', 'คลายความตึงเครียดสะสม'],
       preparationTips: ['สวมใส่ชุดหลวมสบาย ไม่รัดแน่น'],
       isFree: false,
-      dateStr: `${currentYear}-${monthStr}-${String(day).padStart(2, '0')}`,
-      dateDisplay: `${String(day).padStart(2, '0')}.${monthStr}`
+      dateStr: `${currentYear}-${targetMonthStr}-${String(day).padStart(2, '0')}`,
+      dateDisplay: `${String(day).padStart(2, '0')}.${targetMonthStr}`
     });
     setIsEditingModalOpen(true);
   };
@@ -286,8 +317,16 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     setEditingEventId(evt.id);
     setSelectedPhoto(null);
     setPhotoPreview(evt.posterUrl || '');
-    const day = Number(evt.dateStr.split('-')[2]) || 1;
-    setFormDayNum(day);
+    
+    // Parse event's actual date (Year, Month, Day) from its dateStr
+    const parts = (evt.dateStr || '').split('-');
+    const evtYear = parts[0] ? Number(parts[0]) : currentYear;
+    const evtMonth = parts[1] ? Number(parts[1]) : (currentMonth + 1);
+    const evtDay = parts[2] ? Number(parts[2]) : 1;
+
+    setFormYearNum(evtYear);
+    setFormMonthNum(evtMonth);
+    setFormDayNum(evtDay);
     setNewSensoryNoteInput('');
     setNewBenefitInput('');
     setNewPrepTipInput('');
@@ -367,7 +406,7 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     }
   };
 
-  // Duplicate Event
+  // Quick Same-Month Duplicate Event (To next day in current month)
   const handleDuplicateEvent = async (evt: ScheduleEvent) => {
     const targetDay = Math.min(daysInMonth, (Number(evt.dateStr.split('-')[2]) || 1) + 1);
     const targetDayStr = String(targetDay).padStart(2, '0');
@@ -391,6 +430,65 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
       showToast(`คัดลอกอีเวนท์ "${evt.name}" ไปยังวันที่ ${targetDayStr}.${monthStr} เรียบร้อยแล้ว`, 'success');
     } else {
       showToast(`❌ คัดลอกอีเวนท์ไม่สำเร็จ: ${res?.error || 'เกิดข้อผิดพลาด'}`, 'error');
+    }
+  };
+
+  // Open Cross-Month Duplicate Modal
+  const openDuplicateModal = (evt: ScheduleEvent) => {
+    setDuplicatingEvent(evt);
+    const parts = (evt.dateStr || '').split('-');
+    const evtYear = parts[0] ? Number(parts[0]) : currentYear;
+    const evtMonth = parts[1] ? Number(parts[1]) : (currentMonth + 1);
+    const nextMonth = evtMonth === 12 ? 1 : evtMonth + 1;
+    const nextYear = evtMonth === 12 ? evtYear + 1 : evtYear;
+    setDuplicateTargetMonths([{ year: nextYear, month: nextMonth }]);
+  };
+
+  // Confirm Cross-Month Duplicate
+  const handleConfirmDuplicateAcrossMonths = async () => {
+    if (!duplicatingEvent || duplicateTargetMonths.length === 0) return;
+    setIsDuplicatingLoading(true);
+
+    const originalDay = Number((duplicatingEvent.dateStr || '').split('-')[2]) || 1;
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const target of duplicateTargetMonths) {
+      const daysInTargetMonth = new Date(target.year, target.month, 0).getDate();
+      const clampedDay = Math.min(originalDay, daysInTargetMonth);
+      const dayStr = String(clampedDay).padStart(2, '0');
+      const monthStrTarget = String(target.month).padStart(2, '0');
+
+      const newEvent: ScheduleEvent = {
+        ...duplicatingEvent,
+        id: `evt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        dateStr: `${target.year}-${monthStrTarget}-${dayStr}`,
+        dateDisplay: `${dayStr}.${monthStrTarget}`,
+        bookedCount: 0,
+        status: 'available'
+      };
+
+      const res = await apiCreateEvent(newEvent);
+      if (res && res.success) {
+        successCount++;
+      } else {
+        failCount++;
+      }
+    }
+
+    setIsDuplicatingLoading(false);
+    setDuplicatingEvent(null);
+    setDuplicateTargetMonths([]);
+    await refreshEvents();
+    window.dispatchEvent(new CustomEvent('mmm_events_updated', {
+      detail: { year: currentYear, month: currentMonth }
+    }));
+    onDataChanged();
+
+    if (failCount === 0) {
+      showToast(`คัดลอกอีเวนท์ "${duplicatingEvent.name}" ไปยัง ${successCount} เดือนเป้าหมายเรียบร้อยแล้ว!`, 'success');
+    } else {
+      showToast(`คัดลอกสำเร็จ ${successCount} เดือน, ล้มเหลว ${failCount} เดือน`, 'error');
     }
   };
 
@@ -444,8 +542,9 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     }
 
     const dayStr = String(formDayNum).padStart(2, '0');
-    const dateStr = `${currentYear}-${monthStr}-${dayStr}`;
-    const dateDisplay = `${dayStr}.${monthStr}`;
+    const monthStrForSave = String(formMonthNum).padStart(2, '0');
+    const dateStr = `${formYearNum}-${monthStrForSave}-${dayStr}`;
+    const dateDisplay = `${dayStr}.${monthStrForSave}`;
 
     const capacity = Number(formData.capacity) || 10;
     const bookedCount = Number(formData.bookedCount) || 0;
@@ -502,15 +601,23 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
       }
 
       if (result && result.success) {
+        const isDifferentMonth = formYearNum !== currentYear || (formMonthNum - 1) !== currentMonth;
+        const targetMonthName = TRANSLATIONS.th.monthNames[formMonthNum - 1] || `เดือน ${formMonthNum}`;
+
         showToast(
           editingEventId 
-            ? `อัปเดตอีเวนท์ "${completeEvent.name}" สำเร็จ!` 
-            : `เพิ่มอีเวนท์ "${completeEvent.name}" เรียบร้อยแล้ว!`,
+            ? `อัปเดตอีเวนท์ "${completeEvent.name}" สำหรับวันที่ ${dayStr} ${targetMonthName} ${formYearNum} (${dateDisplay}) สำเร็จ!` 
+            : `บันทึกอีเวนท์ "${completeEvent.name}" สำหรับวันที่ ${dayStr} ${targetMonthName} ${formYearNum} (${dateDisplay}) เรียบร้อยแล้ว!`,
           'success'
         );
+
+        if (isDifferentMonth && onMonthChange) {
+          onMonthChange(formYearNum, formMonthNum - 1);
+        }
+
         await refreshEvents();
         window.dispatchEvent(new CustomEvent('mmm_events_updated', {
-          detail: { year: currentYear, month: currentMonth }
+          detail: { year: formYearNum, month: formMonthNum - 1 }
         }));
         onDataChanged();
         setIsEditingModalOpen(false);
@@ -770,14 +877,26 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
                       <span>{isFull ? 'ปลดล็อค (ว่าง)' : 'เต็มแล้ว'}</span>
                     </button>
 
+                    {/* Quick Same-Day Duplicate */}
                     <button
                       type="button"
                       onClick={() => handleDuplicateEvent(evt)}
-                      title="คัดลอกอีเวนท์นี้ (Duplicate)"
-                      className="px-3 py-1.5 bg-[#FAF7F5] hover:bg-[#F2ECE4] border border-[#E5DFD7] text-[#444] rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                      title="คัดลอกอีเวนท์ไปยังวันถัดไป (ในเดือนเดียวกัน)"
+                      className="px-2.5 py-1.5 bg-[#FAF7F5] hover:bg-[#F2ECE4] border border-[#E5DFD7] text-[#444] rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                     >
                       <Copy className="w-3.5 h-3.5 text-[#E84D84]" />
                       <span>Duplicate</span>
+                    </button>
+
+                    {/* Cross-Month Duplicate */}
+                    <button
+                      type="button"
+                      onClick={() => openDuplicateModal(evt)}
+                      title="คัดลอกอีเวนท์นี้ไปยังเดือนอื่น ๆ (Cross-Month Duplicate)"
+                      className="px-2.5 py-1.5 bg-[#FFF7EB] hover:bg-[#FEEFD4] border border-[#FDE6B5] text-[#B27B00] rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <Calendar className="w-3.5 h-3.5 text-[#E08A00]" />
+                      <span>ข้ามเดือน</span>
                     </button>
 
                     <button
@@ -832,45 +951,96 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
 
             {/* Form Body */}
             <form onSubmit={handleSaveForm} className="space-y-4 text-xs">
-              {/* Row 1: Date & Time */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#EFE8E1]">
+              {/* Row 1: Date & Time & Branch */}
+              <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#EFE8E1] space-y-3">
+                {/* 3-Column Date Selectors: Day, Month, Year */}
                 <div>
-                  <label className="block text-[11px] font-semibold text-[#555] mb-1">วันที่จัด (Day of Month)</label>
-                  <select
-                    value={formDayNum}
-                    onChange={(e) => setFormDayNum(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-white rounded-xl border border-[#E5DFD7] font-mono text-xs focus:outline-none focus:border-[#E84D84]"
-                  >
-                    {Array.from({ length: daysInMonth }).map((_, idx) => (
-                      <option key={idx + 1} value={idx + 1}>
-                        วันที่ {idx + 1} {monthName} ({String(idx + 1).padStart(2, '0')}.{monthStr})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-[11px] font-bold text-[#444] flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-[#E84D84]" />
+                      <span>วันที่จัดกิจกรรม (Event Date) *</span>
+                    </label>
+                    <span className="text-[10px] text-[#888] font-mono">
+                      {String(formDayNum).padStart(2, '0')}.{String(formMonthNum).padStart(2, '0')}.{formYearNum} (พ.ศ. {formYearNum + 543})
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    {/* Day Selector */}
+                    <div>
+                      <label className="block text-[10px] font-semibold text-[#666] mb-1">วันที่ (Day)</label>
+                      <select
+                        value={formDayNum}
+                        onChange={(e) => setFormDayNum(Number(e.target.value))}
+                        className="w-full px-2.5 py-2 bg-white rounded-xl border border-[#E5DFD7] font-mono text-xs focus:outline-none focus:border-[#E84D84]"
+                      >
+                        {Array.from({ length: daysInFormMonth }).map((_, idx) => (
+                          <option key={idx + 1} value={idx + 1}>
+                            วันที่ {idx + 1}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Month Selector */}
+                    <div>
+                      <label className="block text-[10px] font-semibold text-[#666] mb-1">เดือน (Month)</label>
+                      <select
+                        value={formMonthNum}
+                        onChange={(e) => handleFormMonthChange(Number(e.target.value))}
+                        className="w-full px-2.5 py-2 bg-white rounded-xl border border-[#E5DFD7] text-xs font-semibold focus:outline-none focus:border-[#E84D84]"
+                      >
+                        {TRANSLATIONS.th.monthNames.map((name, idx) => (
+                          <option key={idx + 1} value={idx + 1}>
+                            {idx + 1}. {name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Year Selector */}
+                    <div>
+                      <label className="block text-[10px] font-semibold text-[#666] mb-1">ปี (Year)</label>
+                      <select
+                        value={formYearNum}
+                        onChange={(e) => handleFormYearChange(Number(e.target.value))}
+                        className="w-full px-2.5 py-2 bg-white rounded-xl border border-[#E5DFD7] font-mono text-xs focus:outline-none focus:border-[#E84D84]"
+                      >
+                        {[currentYear - 1, currentYear, currentYear + 1, currentYear + 2].map((y) => (
+                          <option key={y} value={y}>
+                            {y} (พ.ศ. {y + 543})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#555] mb-1">เวลาสั้น (Don't Miss Display)</label>
-                  <input
-                    type="text"
-                    value={formData.timeDisplay || ''}
-                    onChange={(e) => setFormData({ ...formData, timeDisplay: e.target.value })}
-                    placeholder="เช่น 9 am หรือ 1 pm"
-                    className="w-full px-3 py-2 bg-white rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
-                  />
-                </div>
+                {/* Branch & Display Time */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-[#EFE8E1]">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#555] mb-1">สาขาที่จัด</label>
+                    <select
+                      value={formData.branch || 'Ratchathewi'}
+                      onChange={(e) => setFormData({ ...formData, branch: e.target.value as any })}
+                      className="w-full px-3 py-2 bg-white rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
+                    >
+                      <option value="Ratchathewi">สาขาราชเทวี (Ratchathewi)</option>
+                      <option value="Nakhonsawan">สาขานครสวรรค์ (Nakhonsawan)</option>
+                      <option value="On-Tour">ออนทัวร์ (On-Tour)</option>
+                    </select>
+                  </div>
 
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#555] mb-1">สาขาที่จัด</label>
-                  <select
-                    value={formData.branch || 'Ratchathewi'}
-                    onChange={(e) => setFormData({ ...formData, branch: e.target.value as any })}
-                    className="w-full px-3 py-2 bg-white rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
-                  >
-                    <option value="Ratchathewi">สาขาราชเทวี (Ratchathewi)</option>
-                    <option value="Nakhonsawan">สาขานครสวรรค์ (Nakhonsawan)</option>
-                    <option value="On-Tour">ออนทัวร์ (On-Tour)</option>
-                  </select>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#555] mb-1">เวลาสั้น (Don't Miss Display)</label>
+                    <input
+                      type="text"
+                      value={formData.timeDisplay || ''}
+                      onChange={(e) => setFormData({ ...formData, timeDisplay: e.target.value })}
+                      placeholder="เช่น 9 am หรือ 1 pm"
+                      className="w-full px-3 py-2 bg-white rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -1511,6 +1681,148 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Duplicate Event Across Months */}
+      {duplicatingEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-5 border border-[#E5DFD7] shadow-2xl animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-[#E5DFD7] pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#FFF7EB] border border-[#FDE6B5] flex items-center justify-center text-[#E08A00]">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#1E1E1E]">คัดลอกอีเวนท์ข้ามเดือน</h3>
+                  <p className="text-xs text-[#777]">Duplicate "{duplicatingEvent.name}" Across Months</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDuplicatingEvent(null)}
+                className="p-1.5 rounded-full hover:bg-black/5 text-[#888] cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Event Info Snapshot */}
+            <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#EFE8E1] space-y-1.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-[#1E1E1E] text-sm">{duplicatingEvent.name}</span>
+                {duplicatingEvent.isSpecialStar && (
+                  <span className="px-2 py-0.5 rounded-full bg-[#FFF4D4] text-[#B27B00] border border-[#FEE180] text-[10px] font-bold">
+                    ★ ไฮไลท์
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-3 text-[#666] text-[11px] flex-wrap">
+                <span>สาขา: {duplicatingEvent.branch}</span>
+                <span>•</span>
+                <span>เวลา: {duplicatingEvent.startTime} - {duplicatingEvent.endTime}</span>
+                <span>•</span>
+                <span>วันที่เดิม: {duplicatingEvent.dateDisplay} ({duplicatingEvent.dateStr})</span>
+              </div>
+              <p className="text-[11px] text-[#888] pt-1">
+                💡 ระบบจะคัดลอกเนื้อหาทั้งหมด (รูปภาพ, ผู้สอน, ราคา, sensory notes, benefits) ไปยังวันเดียวกันของแต่ละเดือนเป้าหมาย (หากเดือนนั้นมีจำนวนวันน้อยกว่า จะปรับให้อัตโนมัติ)
+              </p>
+            </div>
+
+            {/* Target Months List */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-[#333]">เลือกเดือนเป้าหมายที่ต้องการสร้างอีเวนท์:</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const lastTarget = duplicateTargetMonths[duplicateTargetMonths.length - 1];
+                    const nextM = lastTarget ? (lastTarget.month === 12 ? 1 : lastTarget.month + 1) : (currentMonth === 11 ? 1 : currentMonth + 2);
+                    const nextY = lastTarget ? (lastTarget.month === 12 ? lastTarget.year + 1 : lastTarget.year) : (currentMonth === 11 ? currentYear + 1 : currentYear);
+                    setDuplicateTargetMonths([...duplicateTargetMonths, { year: nextY, month: nextM }]);
+                  }}
+                  className="px-2.5 py-1 bg-[#FAF0F3] hover:bg-[#FCE3EB] text-[#E84D84] border border-[#F8DDE5] rounded-xl text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ เพิ่มเดือนเป้าหมาย</span>
+                </button>
+              </div>
+
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {duplicateTargetMonths.map((target, idx) => (
+                  <div key={idx} className="flex items-center gap-2 p-2.5 bg-[#FAF8F5] rounded-xl border border-[#E5DFD7]">
+                    <span className="text-xs font-bold text-[#888] w-5 text-center">{idx + 1}.</span>
+                    <div className="flex-1 grid grid-cols-2 gap-2">
+                      <select
+                        value={target.month}
+                        onChange={(e) => {
+                          const updated = [...duplicateTargetMonths];
+                          updated[idx] = { ...updated[idx], month: Number(e.target.value) };
+                          setDuplicateTargetMonths(updated);
+                        }}
+                        className="w-full px-2.5 py-1.5 bg-white rounded-lg border border-[#E5DFD7] text-xs font-semibold focus:outline-none focus:border-[#E84D84]"
+                      >
+                        {TRANSLATIONS.th.monthNames.map((name, mIdx) => (
+                          <option key={mIdx + 1} value={mIdx + 1}>
+                            {mIdx + 1}. {name}
+                          </option>
+                        ))}
+                      </select>
+
+                      <select
+                        value={target.year}
+                        onChange={(e) => {
+                          const updated = [...duplicateTargetMonths];
+                          updated[idx] = { ...updated[idx], year: Number(e.target.value) };
+                          setDuplicateTargetMonths(updated);
+                        }}
+                        className="w-full px-2.5 py-1.5 bg-white rounded-lg border border-[#E5DFD7] text-xs font-mono focus:outline-none focus:border-[#E84D84]"
+                      >
+                        {[currentYear - 1, currentYear, currentYear + 1, currentYear + 2].map((y) => (
+                          <option key={y} value={y}>
+                            {y} (พ.ศ. {y + 543})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {duplicateTargetMonths.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setDuplicateTargetMonths(duplicateTargetMonths.filter((_, i) => i !== idx))}
+                        className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        title="ลบแถวนี้"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#E5DFD7]">
+              <button
+                type="button"
+                onClick={() => setDuplicatingEvent(null)}
+                disabled={isDuplicatingLoading}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-[#666] hover:bg-black/5 transition-colors cursor-pointer"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDuplicateAcrossMonths}
+                disabled={isDuplicatingLoading || duplicateTargetMonths.length === 0}
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-[#E84D84] hover:bg-[#D43D73] text-white flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <Check className="w-4 h-4" />
+                <span>{isDuplicatingLoading ? 'กำลังคัดลอก...' : `ยืนยันคัดลอก (${duplicateTargetMonths.length} เดือน)`}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

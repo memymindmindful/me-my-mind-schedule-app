@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, MoreHorizontal, Search, X, Globe } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Search, X, Globe, RefreshCw } from 'lucide-react';
 import { Language, TRANSLATIONS } from '../utils/translations';
 
 interface CalendarHeaderProps {
@@ -9,6 +9,8 @@ interface CalendarHeaderProps {
   onSearchChange: (query: string) => void;
   lang: Language;
   onToggleLang: () => void;
+  onRefresh: () => void;
+  isRefreshing?: boolean;
 }
 
 export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
@@ -17,13 +19,15 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   searchQuery,
   onSearchChange,
   lang,
-  onToggleLang
+  onToggleLang,
+  onRefresh,
+  isRefreshing = false
 }) => {
   const t = TRANSLATIONS[lang];
 
   return (
     <div className="w-full space-y-3 select-none">
-      {/* Top Bar: Back, Title, Language Toggle, Options */}
+      {/* Top Bar: Back, Title, Refresh, Language Toggle, Options */}
       <div className="flex items-center justify-between pt-1">
         {/* Back Button (<) */}
         <button
@@ -41,8 +45,20 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           {t.appTitle}
         </h1>
 
-        {/* Right Controls: Language Switcher & Options Button */}
+        {/* Right Controls: Refresh Button, Language Switcher & Options Button */}
         <div className="flex items-center gap-1.5">
+          {/* Refresh Button */}
+          <button
+            id="header-refresh-btn"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            className="p-1.5 text-[#E84D84] hover:bg-[#E84D84]/10 rounded-full transition-colors cursor-pointer disabled:opacity-50"
+            title={lang === 'th' ? 'รีเฟรชข้อมูลล่าสุด' : 'Refresh latest data'}
+            aria-label="Refresh"
+          >
+            <RefreshCw className={`w-4 h-4 stroke-[2.5] ${isRefreshing ? 'animate-spin text-[#E84D84]' : ''}`} />
+          </button>
+
           {/* Language Toggle Pill [TH | EN] */}
           <button
             id="header-lang-toggle-btn"

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { ScheduleEvent, BranchLocation, BookingSubmission, DayCalendarInfo, AllStudioSettings, DayBarConfig } from './types';
 import { getStoredBranchFilter, saveStoredBranchFilter, DEFAULT_STUDIO_SETTINGS, getDefaultMonthBars } from './utils/adminStorage';
 import { apiFetchMonthEvents, apiFetchMonthBars, apiFetchStudioSettings } from './utils/apiClient';
@@ -91,7 +91,58 @@ export default function App() {
   // Studio settings state (Branding, sayHiMessage, etc.)
   const [studioSettings, setStudioSettings] = useState<AllStudioSettings>(DEFAULT_STUDIO_SETTINGS);
 
-  // Load Studio Settings from backend API
+  // Manual refresh loading state
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+
+  // Dynamic monthly schedule data loaded exclusively from Database/API
+  const [events, setEvents] = useState<ScheduleEvent[]>([]);
+  const [monthBars, setMonthBars] = useState<Record<number, DayBarConfig>>(() => 
+    getDefaultMonthBars(new Date().getFullYear(), new Date().getMonth())
+  );
+
+  // Reusable Calendar Data Refresh Function
+  const refreshCalendarData = useCallback(async (showFeedback: boolean = false) => {
+    if (showFeedback) setIsRefreshing(true);
+    try {
+      const [apiEvents, apiBars, apiSettings] = await Promise.all([
+        apiFetchMonthEvents(currentYear, currentMonth),
+        apiFetchMonthBars(currentYear, currentMonth),
+        apiFetchStudioSettings()
+      ]);
+
+      if (apiEvents !== null) {
+        setEvents(apiEvents);
+      } else {
+        console.warn('Could not load events from server. Displaying empty schedule.');
+        setEvents([]);
+      }
+
+      if (apiBars !== null && Object.keys(apiBars).length > 0) {
+        setMonthBars(apiBars);
+      } else {
+        setMonthBars(getDefaultMonthBars(currentYear, currentMonth));
+      }
+
+      if (apiSettings && apiSettings.studio) {
+        setStudioSettings(apiSettings);
+      }
+
+      if (showFeedback) {
+        setToastMessage(lang === 'th' ? '🔄 อัปเดตข้อมูลล่าสุดแล้ว!' : '🔄 Refreshed with latest data!');
+        setTimeout(() => setToastMessage(null), 2500);
+      }
+    } catch (err) {
+      console.error('Failed to refresh calendar data:', err);
+      if (showFeedback) {
+        setToastMessage(lang === 'th' ? '❌ รีเฟรชไม่สำเร็จ กรุณาลองใหม่' : '❌ Refresh failed, please try again');
+        setTimeout(() => setToastMessage(null), 2500);
+      }
+    } finally {
+      if (showFeedback) setIsRefreshing(false);
+    }
+  }, [currentYear, currentMonth, lang]);
+
+  // Load Initial Studio Settings and listen for settings updates
   useEffect(() => {
     let isMounted = true;
     apiFetchStudioSettings().then((apiSettings) => {
@@ -116,50 +167,10 @@ export default function App() {
     };
   }, []);
 
-  // Dynamic monthly schedule data loaded exclusively from Database/API
-  const [events, setEvents] = useState<ScheduleEvent[]>([]);
-  const [monthBars, setMonthBars] = useState<Record<number, DayBarConfig>>(() => 
-    getDefaultMonthBars(new Date().getFullYear(), new Date().getMonth())
-  );
-
   // Reload data from API whenever current month or year changes
   useEffect(() => {
-    let isMounted = true;
-
-    // 1. Fetch Month Events from Database API
-    apiFetchMonthEvents(currentYear, currentMonth).then((apiEvents) => {
-      if (!isMounted) return;
-      if (apiEvents !== null) {
-        // Successful response (including empty array [] when month has no events)
-        setEvents(apiEvents);
-      } else {
-        console.warn('Could not load events from server. Displaying empty schedule.');
-        setEvents([]);
-      }
-    }).catch((err) => {
-      if (!isMounted) return;
-      console.error('Failed to fetch events from server:', err);
-      setEvents([]);
-    });
-
-    // 2. Fetch Month Day Bars / Pills from Database API
-    apiFetchMonthBars(currentYear, currentMonth).then((apiBars) => {
-      if (!isMounted) return;
-      if (apiBars !== null && Object.keys(apiBars).length > 0) {
-        setMonthBars(apiBars);
-      } else {
-        setMonthBars(getDefaultMonthBars(currentYear, currentMonth));
-      }
-    }).catch((err) => {
-      if (!isMounted) return;
-      console.warn('Using default month bars layout:', err);
-      setMonthBars(getDefaultMonthBars(currentYear, currentMonth));
-    });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [currentYear, currentMonth]);
+    refreshCalendarData(false);
+  }, [currentYear, currentMonth, refreshCalendarData]);
 
   // Listen to live events dispatched during admin operations in same session
   useEffect(() => {
@@ -271,13 +282,18 @@ export default function App() {
       saveStoredBranchFilter(nextVal);
       return nextVal;
     });
+    setSelectedDateStr(null);
   };
 
 
   // Handle date selection
   const handleSelectDate = (dateStr: string, events: ScheduleEvent[]) => {
-    setSelectedDateStr(dateStr);
-    if (events.length > 0) {
+    if (selectedDateStr === dateStr && (!events || events.length === 0)) {
+      setSelectedDateStr(null);
+    } else {
+      setSelectedDateStr(dateStr);
+    }
+    if (events && events.length > 0) {
       setActiveEventModal(events[0]);
     }
   };
@@ -325,7 +341,7 @@ export default function App() {
           <div className="w-full bg-[#FAF9F6] text-[#2B2B2B] flex flex-col justify-between overflow-hidden sm:rounded-[36px] sm:border sm:border-[#E5DFD7] sm:shadow-[0_20px_50px_rgba(0,0,0,0.12)] min-h-screen sm:min-h-[844px]">
             {/* Inner Mobile Screen Content */}
             <div className="px-4 sm:px-6 pt-3 pb-6 flex-1 flex flex-col justify-between space-y-3">
-              {/* 1. Header (Back, Title, Language Switcher, Options, Search Bar) */}
+              {/* 1. Header (Back, Title, Refresh, Language Switcher, Options, Search Bar) */}
               <CalendarHeader
                 onBack={handleBackToLine}
                 onOptionsClick={() => setIsOptionsMenuOpen(true)}
@@ -333,6 +349,8 @@ export default function App() {
                 onSearchChange={setSearchQuery}
                 lang={lang}
                 onToggleLang={handleToggleLang}
+                onRefresh={() => refreshCalendarData(true)}
+                isRefreshing={isRefreshing}
               />
 
               {/* 2. Calendar Month & Grid View */}
@@ -386,7 +404,10 @@ export default function App() {
       {/* CASE 2: Event Details & Booking Form Modal (Opens PRE-FILLED LINE chat) */}
       <EventDetailModal
         event={activeEventModal}
-        onClose={() => setActiveEventModal(null)}
+        onClose={() => {
+          setActiveEventModal(null);
+          setSelectedDateStr(null); // ⭐ Reset single-day filter so full calendar shows again
+        }}
         onConfirmBooking={handleConfirmBooking}
         lang={lang}
         globalFacilitator={studioSettings?.facilitator}
@@ -400,7 +421,10 @@ export default function App() {
       <OptionsMenuModal
         isOpen={isOptionsMenuOpen}
         onClose={() => setIsOptionsMenuOpen(false)}
-        onSelectMonth={(idx) => setCurrentMonth(idx)}
+        onSelectMonth={(idx) => {
+          setCurrentMonth(idx);
+          setSelectedDateStr(null);
+        }}
         currentMonth={currentMonth}
         settings={studioSettings}
         lang={lang}

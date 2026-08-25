@@ -326,6 +326,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToClient }
             currentYear={currentYear}
             currentMonth={currentMonth}
             onDataChanged={() => {}}
+            onMonthChange={(year, month) => {
+              setCurrentYear(year);
+              setCurrentMonth(month);
+            }}
           />
         )}
 
