@@ -50,7 +50,7 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
     let isMounted = true;
     apiFetchMonthBars(currentYear, currentMonth).then((remoteBars) => {
       if (!isMounted) return;
-      if (remoteBars && Object.keys(remoteBars).length > 0) {
+      if (remoteBars !== null) {
         setBarsMap(remoteBars);
       } else {
         setBarsMap(getDefaultMonthBars(currentYear, currentMonth));

@@ -9,6 +9,30 @@ import { mapRowToEvent } from './events';
 
 export const adminRouter = Router();
 
+// Helper to parse time string into minutes since midnight
+function parseTimeToMinutesServerSide(timeStr: string): number {
+  if (!timeStr) return 0;
+  const match = String(timeStr).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (!match) return 0;
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const period = match[3]?.toUpperCase();
+  if (period === 'PM' && hours !== 12) hours += 12;
+  if (period === 'AM' && hours === 12) hours = 0;
+  return hours * 60 + minutes;
+}
+
+// Helper to calculate duration in minutes between start and end time
+function calculateDurationMinutesServerSide(startTime: string, endTime: string, defaultMinutes: number = 90): number {
+  if (!startTime || !endTime) return defaultMinutes;
+  const startMin = parseTimeToMinutesServerSide(startTime);
+  const endMin = parseTimeToMinutesServerSide(endTime);
+  if (startMin === 0 && endMin === 0) return defaultMinutes;
+  let diff = endMin - startMin;
+  if (diff <= 0) diff += 24 * 60; // handle events crossing midnight
+  return diff > 0 ? diff : defaultMinutes;
+}
+
 // Ensure all admin and settings API responses are never cached
 adminRouter.use((_req: Request, res: Response, next) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -142,7 +166,10 @@ adminRouter.post('/admin/events', authenticateToken, upload.single('photo'), (re
     const startTime = body.startTime || '09:00 AM';
     const endTime = body.endTime || '10:30 AM';
     const timeDisplay = body.timeDisplay || `${startTime} - ${endTime}`;
-    const durationMinutes = parseInt(body.durationMinutes, 10) || 90;
+    const calculatedDuration = calculateDurationMinutesServerSide(startTime, endTime);
+    const durationMinutes = (body.durationMinutes !== undefined && !isNaN(parseInt(body.durationMinutes, 10)) && parseInt(body.durationMinutes, 10) > 0)
+      ? parseInt(body.durationMinutes, 10)
+      : calculatedDuration;
     const category = body.category || 'Sound Healing / Sound Baths';
     const branch = body.branch || 'Nakhonsawan';
     const capacity = parseInt(body.capacity, 10) || 10;
@@ -233,7 +260,7 @@ adminRouter.put('/admin/events/:id', authenticateToken, upload.single('photo'), 
     const file = req.file;
 
     // Check if event exists
-    const check = db.exec("SELECT id, posterUrl, facilitatorId FROM events WHERE id = ?", [id]);
+    const check = db.exec("SELECT id, posterUrl, facilitatorId, startTime, endTime, durationMinutes FROM events WHERE id = ?", [id]);
     if (!check || check.length === 0 || check[0].values.length === 0) {
       res.status(404).json({
         success: false,
@@ -249,6 +276,18 @@ adminRouter.put('/admin/events/:id', authenticateToken, upload.single('photo'), 
       posterUrl = `/uploads/${file.filename}`;
     } else if (body.posterUrl !== undefined) {
       posterUrl = body.posterUrl;
+    }
+
+    const existingStartTime = check[0].values[0][3] as string;
+    const existingEndTime = check[0].values[0][4] as string;
+    const effStartTime = body.startTime || existingStartTime || '09:00 AM';
+    const effEndTime = body.endTime || existingEndTime || '10:30 AM';
+    
+    let durationMinutes: number | null = null;
+    if (body.durationMinutes !== undefined && !isNaN(parseInt(body.durationMinutes, 10)) && parseInt(body.durationMinutes, 10) > 0) {
+      durationMinutes = parseInt(body.durationMinutes, 10);
+    } else if (body.startTime || body.endTime) {
+      durationMinutes = calculateDurationMinutesServerSide(effStartTime, effEndTime);
     }
 
     let facilitatorId = check[0].values[0][2];
@@ -283,7 +322,7 @@ adminRouter.put('/admin/events/:id', authenticateToken, upload.single('photo'), 
       body.startTime,
       body.endTime,
       body.timeDisplay,
-      body.durationMinutes ? parseInt(body.durationMinutes, 10) : null,
+      durationMinutes !== null ? durationMinutes : (body.durationMinutes ? parseInt(body.durationMinutes, 10) : null),
       body.category,
       body.branch,
       body.capacity ? parseInt(body.capacity, 10) : null,
@@ -1197,8 +1236,8 @@ adminRouter.post('/admin/bars/:year/:month', (req: Request, res: Response) => {
 
     const db = getDatabase();
 
-    // Delete existing bars for this month
-    db.run("DELETE FROM month_bars WHERE year = ? AND (month = ? OR month = ?)", [year, month, month > 0 ? month - 1 : month]);
+    // Delete existing bars for this month ONLY (fixed — no longer touches the previous month)
+    db.run("DELETE FROM month_bars WHERE year = ? AND month = ?", [year, month]);
 
     // Insert new bars
     Object.entries(bars).forEach(([dayStr, barData]: [string, any]) => {
@@ -1354,9 +1393,11 @@ adminRouter.post('/admin/reset-data', (req: Request, res: Response) => {
     }
 
     if (resetType === 'month_bars' && year && month !== undefined) {
-      db.run("DELETE FROM month_bars WHERE year = ? AND (month = ? OR month = ?)", [Number(year), Number(month), Number(month) > 0 ? Number(month) - 1 : Number(month)]);
+      const mNum = Number(month);
+      const targetMonth = mNum <= 11 ? mNum + 1 : mNum;
+      db.run("DELETE FROM month_bars WHERE year = ? AND month = ?", [Number(year), targetMonth]);
       saveDatabase();
-      res.json({ success: true, message: `Cleared custom month bars for ${year}-${month}`, resetType });
+      res.json({ success: true, message: `Cleared custom month bars for ${year}-${targetMonth}`, resetType });
       return;
     }
 

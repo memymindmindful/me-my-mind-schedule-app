@@ -6,6 +6,7 @@ import { CalendarHeader } from './components/CalendarHeader';
 import { CalendarMonthView } from './components/CalendarMonthView';
 import { DontMissSection } from './components/DontMissSection';
 import { EventDetailModal } from './components/EventDetailModal';
+import { DayEventsListModal } from './components/DayEventsListModal';
 import { BookingInstructionsModal } from './components/BookingInstructionsModal';
 import { OptionsMenuModal } from './components/OptionsMenuModal';
 import { AdminDashboard } from './components/admin/AdminDashboard';
@@ -79,6 +80,9 @@ export default function App() {
   // Active event for detailed popup
   const [activeEventModal, setActiveEventModal] = useState<ScheduleEvent | null>(null);
 
+  // Day events list popup when multiple events exist on the same day
+  const [dayEventsListModal, setDayEventsListModal] = useState<{ dateStr: string; events: ScheduleEvent[] } | null>(null);
+
   // Generic booking instructions modal
   const [isBookingInstructionsOpen, setIsBookingInstructionsOpen] = useState<boolean>(false);
 
@@ -117,9 +121,10 @@ export default function App() {
         setEvents([]);
       }
 
-      if (apiBars !== null && Object.keys(apiBars).length > 0) {
+      if (apiBars !== null) {
         setMonthBars(apiBars);
       } else {
+        console.warn('Could not load month bars from server. Using default view.');
         setMonthBars(getDefaultMonthBars(currentYear, currentMonth));
       }
 
@@ -293,9 +298,22 @@ export default function App() {
     } else {
       setSelectedDateStr(dateStr);
     }
-    if (events && events.length > 0) {
+
+    if (!events || events.length === 0) return;
+
+    if (events.length === 1) {
+      // Exactly one event — open its detail directly
       setActiveEventModal(events[0]);
+    } else {
+      // Multiple events on the same day — show the Day Event List popup
+      setDayEventsListModal({ dateStr, events });
     }
+  };
+
+  // Handle selecting an event from the Day Event List popup
+  const handleSelectEventFromDayList = (evt: ScheduleEvent) => {
+    setDayEventsListModal(null);
+    setActiveEventModal(evt);
   };
 
   // Handle Confirmed Booking
@@ -416,6 +434,18 @@ export default function App() {
           setToastMessage(msg);
           setTimeout(() => setToastMessage(null), 3500);
         }}
+      />
+
+      {/* CASE 3: Day Events List Modal when multiple events exist on the same day */}
+      <DayEventsListModal
+        dateStr={dayEventsListModal?.dateStr || null}
+        events={dayEventsListModal?.events || []}
+        lang={lang}
+        onClose={() => {
+          setDayEventsListModal(null);
+          setSelectedDateStr(null);
+        }}
+        onSelectEvent={handleSelectEventFromDayList}
       />
 
       {/* Options Menu & Studio Guide Modal */}

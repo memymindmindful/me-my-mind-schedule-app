@@ -32,6 +32,29 @@ import { ScheduleEvent, OfferingCategory, BranchLocation, Facilitator, Facilitat
 import { apiCreateEvent, apiUpdateEvent, apiDeleteEvent, apiFetchMonthEvents, apiResetData, apiFetchStudioSettings } from '../../utils/apiClient';
 import { TRANSLATIONS } from '../../utils/translations';
 
+// Helper to parse time string (e.g., "10:00 AM", "07:00 PM", "12:30 PM") into minutes since midnight
+export function parseTimeToMinutes(timeStr: string): number {
+  if (!timeStr) return 0;
+  const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (!match) return 0;
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const period = match[3]?.toUpperCase();
+  if (period === 'PM' && hours !== 12) hours += 12;
+  if (period === 'AM' && hours === 12) hours = 0;
+  return hours * 60 + minutes;
+}
+
+// Helper to calculate duration in minutes between start and end time
+export function calculateDurationMinutes(startTime: string, endTime: string): number {
+  const startMin = parseTimeToMinutes(startTime);
+  const endMin = parseTimeToMinutes(endTime);
+  if (startMin === 0 && endMin === 0) return 90;
+  let diff = endMin - startMin;
+  if (diff <= 0) diff += 24 * 60; // handle events crossing midnight
+  return diff > 0 ? diff : 90;
+}
+
 interface AdminEventsManagerProps {
   currentYear: number;
   currentMonth: number;
@@ -579,7 +602,7 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
       timeDisplay: formData.timeDisplay?.trim() || '9 am',
       startTime: formData.startTime || '09:00 AM',
       endTime: formData.endTime || '10:30 AM',
-      durationMinutes: Number(formData.durationMinutes) || 90,
+      durationMinutes: calculateDurationMinutes(formData.startTime || '09:00 AM', formData.endTime || '10:30 AM'),
       useGlobalFacilitator: formData.useGlobalFacilitator !== false,
       facilitatorId: formData.useGlobalFacilitator !== false ? formData.facilitatorId : undefined,
       facilitator: {
@@ -647,15 +670,23 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     }
   };
 
-  const filteredEvents = events.filter(e => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return e.name.toLowerCase().includes(q) || 
-           e.englishName?.toLowerCase().includes(q) ||
-           e.branch.toLowerCase().includes(q) ||
-           e.adminNote?.toLowerCase().includes(q) ||
-           e.dateDisplay.includes(q);
-  });
+  const filteredEvents = events
+    .filter(e => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return e.name.toLowerCase().includes(q) || 
+             e.englishName?.toLowerCase().includes(q) ||
+             e.branch.toLowerCase().includes(q) ||
+             e.adminNote?.toLowerCase().includes(q) ||
+             e.dateDisplay.includes(q);
+    })
+    .sort((a, b) => {
+      // Sort by date first
+      const dateCompare = (a.dateStr || a.date || '').localeCompare(b.dateStr || b.date || '');
+      if (dateCompare !== 0) return dateCompare;
+      // Then by start time within the same day
+      return parseTimeToMinutes(a.startTime) - parseTimeToMinutes(b.startTime);
+    });
 
   return (
     <div className="space-y-6">
@@ -1235,24 +1266,34 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
               </div>
 
               {/* Row 5: Start Time & End Time */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#555] mb-1">เวลาเริ่ม</label>
-                  <input
-                    type="text"
-                    value={formData.startTime || '09:00 AM'}
-                    onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#FAF8F5] rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
-                  />
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-[#555]">ช่วงเวลาจัดกิจกรรม (Start & End Time)</span>
+                  <span className="text-[11px] font-medium text-[#E84D84] bg-[#FAF0F3] px-2 py-0.5 rounded-md border border-[#F8DDE5]">
+                    ⏱️ คำนวณอัตโนมัติ: {calculateDurationMinutes(formData.startTime || '09:00 AM', formData.endTime || '10:30 AM')} นาที
+                  </span>
                 </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#555] mb-1">เวลาสิ้นสุด</label>
-                  <input
-                    type="text"
-                    value={formData.endTime || '10:30 AM'}
-                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#FAF8F5] rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
-                  />
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="block text-[10px] text-[#777] mb-1">เวลาเริ่ม (เช่น 09:00 AM / 10:00 AM / 07:00 PM)</label>
+                    <input
+                      type="text"
+                      value={formData.startTime || '09:00 AM'}
+                      onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                      placeholder="09:00 AM"
+                      className="w-full px-3 py-2 bg-[#FAF8F5] rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-[#777] mb-1">เวลาสิ้นสุด (เช่น 10:30 AM / 11:00 AM / 08:30 PM)</label>
+                    <input
+                      type="text"
+                      value={formData.endTime || '10:30 AM'}
+                      onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                      placeholder="10:30 AM"
+                      className="w-full px-3 py-2 bg-[#FAF8F5] rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
+                    />
+                  </div>
                 </div>
               </div>
 

@@ -4,6 +4,19 @@ import { BranchLocation, ScheduleEvent, DayCalendarInfo, DayBarConfig } from '..
 import { getDefaultMonthBars } from '../utils/adminStorage';
 import { Language, TRANSLATIONS } from '../utils/translations';
 
+// Helper to parse time string into minutes since midnight
+function parseTimeToMinutes(timeStr: string): number {
+  if (!timeStr) return 0;
+  const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (!match) return 0;
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const period = match[3]?.toUpperCase();
+  if (period === 'PM' && hours !== 12) hours += 12;
+  if (period === 'AM' && hours === 12) hours = 0;
+  return hours * 60 + minutes;
+}
+
 interface CalendarMonthViewProps {
   currentYear: number;
   currentMonth: number; // 0-indexed
@@ -42,7 +55,7 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
 
   // Dynamic Bar Tabs from API or initial defaults
   const monthBarsMap: Record<number, DayBarConfig> = useMemo(() => {
-    if (incomingMonthBars && Object.keys(incomingMonthBars).length > 0) {
+    if (incomingMonthBars !== undefined && incomingMonthBars !== null) {
       return incomingMonthBars;
     }
     return getDefaultMonthBars(currentYear, currentMonth);
@@ -63,8 +76,10 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
 
     const dayBar = monthBarsMap[d];
 
-    // Events on this date
-    const dayEvents = allEvents.filter(e => e.dateStr === dateStr);
+    // Events on this date (sorted chronologically by start time)
+    const dayEvents = allEvents
+      .filter(e => e.dateStr === dateStr)
+      .sort((a, b) => parseTimeToMinutes(a.startTime) - parseTimeToMinutes(b.startTime));
 
     // Default branch is Nakhonsawan unless specified otherwise
     const branch: BranchLocation = dayBar?.branch || dayEvents[0]?.branch || 'Nakhonsawan';
@@ -354,52 +369,52 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
                 {day.dayNum}
               </span>
 
-              {/* Gold Star Overlay for Special / Important Events (Days 4, 18, 26, etc.) */}
-              {day.hasSpecialStar && (
-                <div 
-                  className="absolute pointer-events-none z-20 -top-1.5 -right-0.5 transform rotate-6 scale-105"
-                  title={lang === 'th' ? 'กิจกรรมไฮไลท์ประจำเดือน' : 'Special Featured Event'}
-                >
-                  <svg 
-                    width="24" 
-                    height="24" 
-                    viewBox="0 0 24 24" 
-                    className="animate-in fade-in zoom-in duration-300 drop-shadow-[0_2px_4px_rgba(217,130,0,0.45)]"
-                  >
-                    <defs>
-                      <linearGradient id={`goldGrad-${day.dayNum}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#FFF275" />
-                        <stop offset="50%" stopColor="#FDB827" />
-                        <stop offset="100%" stopColor="#EA8F00" />
-                      </linearGradient>
-                    </defs>
-                    {/* Classic 5-point Star Geometry */}
-                    <path
-                      d="M12 2.5l2.75 5.85 6.45.68-4.8 4.38 1.35 6.34L12 16.5l-5.75 3.25 1.35-6.34-4.8-4.38 6.45-.68L12 2.5z"
-                      fill={`url(#goldGrad-${day.dayNum})`}
-                      stroke="#C97500"
-                      strokeWidth="0.8"
-                      strokeLinejoin="round"
-                    />
-                    {/* Subtle Inner Star Highlight */}
-                    <path
-                      d="M12 4.5l1.6 3.6 4 .4-3 2.7.9 4-3.5-2V4.5z"
-                      fill="#FFFFFF"
-                      opacity="0.35"
-                    />
-                  </svg>
-                </div>
-              )}
+              {/* Day Cell Badges (Special Event Star & Online Video Badge) */}
+              {(day.hasSpecialStar || day.hasOnlineEvent) && (
+                <div className="absolute -top-1.5 -right-0.5 z-20 flex flex-col items-center gap-0.5 pointer-events-none">
+                  {day.hasSpecialStar && (
+                    <div 
+                      className="transform rotate-6 scale-105"
+                      title={lang === 'th' ? 'กิจกรรมไฮไลท์ประจำเดือน' : 'Special Featured Event'}
+                    >
+                      <svg 
+                        width="24" 
+                        height="24" 
+                        viewBox="0 0 24 24" 
+                        className="animate-in fade-in zoom-in duration-300 drop-shadow-[0_2px_4px_rgba(217,130,0,0.45)]"
+                      >
+                        <defs>
+                          <linearGradient id={`goldGrad-${day.dayNum}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#FFF275" />
+                            <stop offset="50%" stopColor="#FDB827" />
+                            <stop offset="100%" stopColor="#EA8F00" />
+                          </linearGradient>
+                        </defs>
+                        {/* Classic 5-point Star Geometry */}
+                        <path
+                          d="M12 2.5l2.75 5.85 6.45.68-4.8 4.38 1.35 6.34L12 16.5l-5.75 3.25 1.35-6.34-4.8-4.38 6.45-.68L12 2.5z"
+                          fill={`url(#goldGrad-${day.dayNum})`}
+                          stroke="#C97500"
+                          strokeWidth="0.8"
+                          strokeLinejoin="round"
+                        />
+                        {/* Subtle Inner Star Highlight */}
+                        <path
+                          d="M12 4.5l1.6 3.6 4 .4-3 2.7.9 4-3.5-2V4.5z"
+                          fill="#FFFFFF"
+                          opacity="0.35"
+                        />
+                      </svg>
+                    </div>
+                  )}
 
-              {/* Online Event Indicator - positioned bottom-left, distinct from the top-right gold star */}
-              {day.hasOnlineEvent && (
-                <div 
-                  className="absolute pointer-events-none z-20 -bottom-1 -left-1"
-                  title={lang === 'th' ? 'มีกิจกรรมออนไลน์' : 'Has an online event'}
-                >
-                  <div className="w-4 h-4 rounded-full bg-[#8A6FAE] flex items-center justify-center shadow-xs border border-white">
-                    <Video className="w-2.5 h-2.5 text-white" strokeWidth={2.5} />
-                  </div>
+                  {day.hasOnlineEvent && (
+                    <div title={lang === 'th' ? 'มีกิจกรรมออนไลน์' : 'Has an online event'}>
+                      <div className="w-4 h-4 rounded-full bg-[#8A6FAE] flex items-center justify-center shadow-xs border border-white">
+                        <Video className="w-2.5 h-2.5 text-white" strokeWidth={2.5} />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

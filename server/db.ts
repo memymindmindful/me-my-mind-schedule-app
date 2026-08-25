@@ -22,6 +22,29 @@ export function saveDatabase(): void {
   }
 }
 
+// Helper to parse time string into minutes since midnight
+function parseTimeToMinutesServerSide(timeStr: string): number {
+  if (!timeStr) return 0;
+  const match = String(timeStr).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (!match) return 0;
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const period = match[3]?.toUpperCase();
+  if (period === 'PM' && hours !== 12) hours += 12;
+  if (period === 'AM' && hours === 12) hours = 0;
+  return hours * 60 + minutes;
+}
+
+// Helper to calculate duration in minutes between start and end time
+function calculateDurationMinutesServerSide(startTime: string, endTime: string): number {
+  const startMin = parseTimeToMinutesServerSide(startTime);
+  const endMin = parseTimeToMinutesServerSide(endTime);
+  if (startMin === 0 && endMin === 0) return 90;
+  let diff = endMin - startMin;
+  if (diff <= 0) diff += 24 * 60; // handle events crossing midnight
+  return diff > 0 ? diff : 90;
+}
+
 // Initialize database with tables and default admin
 export async function initDatabase(): Promise<Database> {
   if (db) return db;
@@ -384,6 +407,33 @@ export async function initDatabase(): Promise<Database> {
       ['admin-master-id', defaultUsername, passwordHash, 'me.my.mind.facialmassage@gmail.com']
     );
     console.log(`[DB] Default admin created: ${defaultUsername} / ${defaultPassword}`);
+  }
+
+  // Migration: Recalculate durationMinutes for all existing events based on actual startTime and endTime
+  try {
+    const allEvents = db.exec("SELECT id, startTime, endTime, durationMinutes FROM events");
+    if (allEvents && allEvents.length > 0 && allEvents[0].values.length > 0) {
+      const rows = allEvents[0].values;
+      let updatedCount = 0;
+      for (const row of rows) {
+        const id = row[0];
+        const startTime = row[1];
+        const endTime = row[2];
+        const currentDuration = row[3];
+        if (startTime && endTime) {
+          const correctDuration = calculateDurationMinutesServerSide(String(startTime), String(endTime));
+          if (correctDuration !== Number(currentDuration)) {
+            db.run("UPDATE events SET durationMinutes = ? WHERE id = ?", [correctDuration, id]);
+            updatedCount++;
+          }
+        }
+      }
+      if (updatedCount > 0) {
+        console.log(`[DB Migration] Recalculated durationMinutes for ${updatedCount} existing event(s).`);
+      }
+    }
+  } catch (err) {
+    console.error('[DB Migration] Failed to recalculate durationMinutes:', err);
   }
 
   saveDatabase();

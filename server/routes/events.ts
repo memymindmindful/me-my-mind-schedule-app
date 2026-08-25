@@ -166,8 +166,8 @@ eventsRouter.get('/bars/:year/:month', (req: Request, res: Response) => {
     }
 
     const db = getDatabase();
-    // Support both 0-indexed and 1-indexed query matching
-    const result = db.exec("SELECT dayNum, branch, tourCity, isPinkPill, isBrownPill, pillPosition, hasSpecialStar, specialStatusType, specialStatusLabelTh, specialStatusLabelEn, specialStatusSubTh, specialStatusSubEn, specialStatusBadgeBg, specialStatusBadgeText FROM month_bars WHERE year = ? AND (month = ? OR month = ?) ORDER BY dayNum ASC", [year, month, month > 0 ? month - 1 : month]);
+    // Query matching year and month
+    const result = db.exec("SELECT dayNum, branch, tourCity, isPinkPill, isBrownPill, pillPosition, hasSpecialStar, specialStatusType, specialStatusLabelTh, specialStatusLabelEn, specialStatusSubTh, specialStatusSubEn, specialStatusBadgeBg, specialStatusBadgeText FROM month_bars WHERE year = ? AND month = ? ORDER BY dayNum ASC", [year, month]);
 
     const bars: Record<number, any> = {};
 
