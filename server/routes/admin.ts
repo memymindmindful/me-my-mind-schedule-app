@@ -134,9 +134,11 @@ adminRouter.post('/admin/events', authenticateToken, upload.single('photo'), (re
     const id = body.id || `evt-${uuidv4()}`;
     const name = body.name || 'Untitled Event';
     const englishName = body.englishName || '';
-    const date = body.date || new Date().toISOString().split('T')[0];
+    // dateStr (from the form's Day/Month/Year selectors) is the source of truth.
+    // `date` should always mirror it exactly — never fall back to server's "today".
+    const dateStr = body.dateStr || body.date || new Date().toISOString().split('T')[0];
+    const date = dateStr;
     const dateDisplay = body.dateDisplay || date;
-    const dateStr = body.dateStr || date;
     const startTime = body.startTime || '09:00 AM';
     const endTime = body.endTime || '10:30 AM';
     const timeDisplay = body.timeDisplay || `${startTime} - ${endTime}`;
@@ -269,7 +271,7 @@ adminRouter.put('/admin/events/:id', authenticateToken, upload.single('photo'), 
     const rawParams = [
       body.name,
       body.englishName,
-      body.date,
+      (body.dateStr !== undefined && body.dateStr !== '') ? body.dateStr : (body.date !== undefined && body.date !== '' ? body.date : null),
       body.dateDisplay,
       body.dateStr,
       body.startTime,

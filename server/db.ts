@@ -90,6 +90,14 @@ export async function initDatabase(): Promise<Database> {
     // Column already exists
   }
 
+  // Safe migration: synchronize date column with dateStr for all existing events
+  try {
+    db.run("UPDATE events SET date = dateStr WHERE dateStr IS NOT NULL AND dateStr != '' AND date != dateStr");
+    console.log('[DB Migration] Synced date column with dateStr for any out-of-sync events.');
+  } catch (err) {
+    console.error('[DB Migration] Failed to sync date/dateStr:', err);
+  }
+
   db.run(`
     CREATE TABLE IF NOT EXISTS admin_users (
       id TEXT PRIMARY KEY,
