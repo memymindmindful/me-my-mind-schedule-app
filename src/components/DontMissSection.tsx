@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { ScheduleEvent } from '../types';
 import { Language, TRANSLATIONS } from '../utils/translations';
+import { parseTimeToMinutes } from '../utils/timeUtils';
 
 interface DontMissSectionProps {
   events: ScheduleEvent[];
@@ -24,14 +25,16 @@ export const DontMissSection: React.FC<DontMissSectionProps> = ({
   const [currentPage, setCurrentPage] = useState(0);
 
   // Filter & prioritize important events for Don't Miss:
-  // Sort with featured/special star first, then by date
+  // Sort with featured/special star first, then by date, and break ties by start time
   const sortedEvents = React.useMemo(() => {
     return [...events].sort((a, b) => {
       if (a.isSpecialStar && !b.isSpecialStar) return -1;
       if (!a.isSpecialStar && b.isSpecialStar) return 1;
       if (a.isFeatured && !b.isFeatured) return -1;
       if (!a.isFeatured && b.isFeatured) return 1;
-      return a.dateStr.localeCompare(b.dateStr);
+      const dateCompare = a.dateStr.localeCompare(b.dateStr);
+      if (dateCompare !== 0) return dateCompare;
+      return parseTimeToMinutes(a.startTime) - parseTimeToMinutes(b.startTime);
     });
   }, [events]);
 
