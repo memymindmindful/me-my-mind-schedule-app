@@ -212,6 +212,7 @@ export const BranchesEditor: React.FC<BranchesEditorProps> = ({
                     <option value="Nakhonsawan">Nakhonsawan (นครสวรรค์)</option>
                     <option value="Ratchathewi">Ratchathewi (ราชเทวี)</option>
                     <option value="On-Tour">On-Tour (ออนทัวร์)</option>
+                    <option value="Online">Online (ออนไลน์)</option>
                   </select>
                 </div>
                 <div className="space-y-1">

@@ -6,7 +6,7 @@ export type OfferingCategory =
   | 'Workshops & Training'
   | 'Corporate Workshops';
 
-export type BranchLocation = 'Nakhonsawan' | 'Ratchathewi' | 'On-Tour';
+export type BranchLocation = 'Nakhonsawan' | 'Ratchathewi' | 'On-Tour' | 'Online';
 
 export interface Facilitator {
   name: string;
@@ -31,7 +31,8 @@ export interface ScheduleEvent {
   endTime: string; // '10:30 AM'
   durationMinutes: number;
   facilitator: Facilitator;
-  useGlobalFacilitator?: boolean; // When true or undefined, uses live global facilitator profile
+  facilitatorId?: string | null; // references facilitator.id, OR null if custom one-off
+  useGlobalFacilitator?: boolean; // When true or undefined, uses live facilitator profile from facilitatorId or default
   priceThb: number;
   isFree?: boolean; // When true, displays 'ฟรี' / 'FREE'
   capacity: number;
@@ -71,6 +72,7 @@ export interface DayCalendarInfo {
   specialStatus?: SpecialStatusDetails;
   hasEvent: boolean;
   hasSpecialStar: boolean;
+  hasOnlineEvent?: boolean;
   isPinkPill?: boolean;
   isBrownPill?: boolean;
   isSundayPink?: boolean;
@@ -126,7 +128,7 @@ export interface StudioInfo {
 }
 
 export interface FacilitatorProfile {
-  id?: string;
+  id: string;
   nameTh: string;
   nameEn: string;
   titleTh: string;
@@ -141,6 +143,9 @@ export interface FacilitatorProfile {
   email?: string;
   phone?: string;
   instagram?: string;
+  isActive: boolean;
+  displayOrder: number;
+  createdAt?: string;
   updatedAt?: string;
 }
 
@@ -198,6 +203,7 @@ export interface ContactInfo {
 export interface AllStudioSettings {
   studio: StudioInfo;
   facilitator: FacilitatorProfile;
+  facilitators: FacilitatorProfile[];
   branches: BranchItem[];
   services: ServiceItem[];
   contact: ContactInfo;

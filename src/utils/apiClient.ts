@@ -325,7 +325,25 @@ export async function apiSaveStudioSettings(settingsData: any, logoFile?: File):
 }
 
 /**
- * Save Facilitator Profile
+ * Fetch active facilitators list (Public & Admin)
+ */
+export async function apiFetchFacilitators(): Promise<any[] | null> {
+  try {
+    const res = await fetch(`${API_BASE}/facilitators`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (json.success && json.data) {
+      return json.data;
+    }
+    return null;
+  } catch (err) {
+    console.warn('Could not fetch facilitators from server:', err);
+    return null;
+  }
+}
+
+/**
+ * Save Facilitator Profile (Single/Default profile)
  */
 export async function apiSaveFacilitator(facData: any, photoFile?: File): Promise<ApiResponse> {
   const token = getAuthToken();
@@ -348,6 +366,58 @@ export async function apiSaveFacilitator(facData: any, photoFile?: File): Promis
         ...(token ? { Authorization: `Bearer ${token}` } : {})
       },
       body: formData
+    });
+    return handleResponse(res);
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error' };
+  }
+}
+
+/**
+ * Save Facilitator Item (Create or Update in multi-facilitator list)
+ */
+export async function apiSaveFacilitatorItem(facData: any, photoFile?: File, id?: string): Promise<ApiResponse> {
+  const token = getAuthToken();
+  const formData = new FormData();
+
+  Object.entries(facData).forEach(([key, val]) => {
+    if (val !== undefined && val !== null) {
+      formData.append(key, typeof val === 'object' ? JSON.stringify(val) : String(val));
+    }
+  });
+
+  if (photoFile) {
+    formData.append('photo', photoFile);
+  }
+
+  const url = id ? `${API_BASE}/admin/facilitators/${id}` : `${API_BASE}/admin/facilitators`;
+  const method = id ? 'PUT' : 'POST';
+
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: formData
+    });
+    return handleResponse(res);
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error' };
+  }
+}
+
+/**
+ * Delete Facilitator Item
+ */
+export async function apiDeleteFacilitatorItem(id: string): Promise<ApiResponse> {
+  const token = getAuthToken();
+  try {
+    const res = await fetch(`${API_BASE}/admin/facilitators/${id}`, {
+      method: 'DELETE',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
     });
     return handleResponse(res);
   } catch (err: any) {

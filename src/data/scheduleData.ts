@@ -51,6 +51,16 @@ export const BRANCH_INFO: Record<BranchLocation, {
     pillBg: '#A67863',
     textColor: '#FFFFFF',
     landmark: 'Bespoke On-Site Venues & Nature Resorts'
+  },
+  'Online': {
+    name: 'Online',
+    nameTh: 'ออนไลน์',
+    tagline: 'Virtual Live Sessions & Meditations',
+    address: 'Live via Zoom / Online Link',
+    dotColor: '#8A6FAE',
+    pillBg: '#E9E0F5',
+    textColor: '#5D4488',
+    landmark: 'Zoom / Google Meet Link provided upon booking'
   }
 };
 

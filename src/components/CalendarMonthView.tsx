@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, Video } from 'lucide-react';
 import { BranchLocation, ScheduleEvent, DayCalendarInfo, DayBarConfig } from '../types';
 import { getDefaultMonthBars } from '../utils/adminStorage';
 import { Language, TRANSLATIONS } from '../utils/translations';
@@ -79,6 +79,7 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
       specialStatus: dayBar?.specialStatus,
       hasEvent: dayEvents.length > 0 || !!dayBar?.isPinkPill || !!dayBar?.isBrownPill,
       hasSpecialStar: !!dayBar?.hasSpecialStar || dayEvents.some(e => e.isSpecialStar),
+      hasOnlineEvent: dayEvents.some(e => e.branch === 'Online'),
       isPinkPill: dayBar?.isPinkPill ?? (branch === 'Ratchathewi' && dayEvents.length > 0),
       isBrownPill: dayBar?.isBrownPill ?? (branch === 'On-Tour'),
       isSundayPink: isSunday,
@@ -148,6 +149,9 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
   // Get localized location name
   const getLocationName = (branch?: BranchLocation, dayNum?: number) => {
     const dayBar = dayNum ? monthBarsMap[dayNum] : undefined;
+    if (branch === 'Online') {
+      return lang === 'th' ? 'ออนไลน์ (Zoom / Live)' : 'Online Session';
+    }
     if (branch === 'On-Tour' || dayBar?.isBrownPill) {
       const city = dayBar?.tourCity || (lang === 'th' ? 'เชียงใหม่' : 'Chiang Mai');
       return lang === 'th' ? `ออนทัวร์ ${city}` : `On-Tour ${city}`;
@@ -161,6 +165,7 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
 
   // Get description for residency tooltip
   const getLocationDesc = (branch?: BranchLocation) => {
+    if (branch === 'Online') return lang === 'th' ? 'กิจกรรมออนไลน์ผ่าน Zoom' : 'Virtual session via Zoom';
     if (branch === 'Ratchathewi') return t.residencyDescRatchathewi;
     if (branch === 'On-Tour') return t.residencyDescOnTour;
     return t.residencyDescNakhonsawan;
@@ -255,6 +260,24 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
             </span>
             <span className="leading-none">
               {t.onTour}
+            </span>
+          </button>
+
+          {/* Online */}
+          <button
+            onClick={() => onToggleBranchFilter('Online')}
+            className={`flex items-center gap-2 px-2 py-0.5 rounded-full transition-all cursor-pointer ${
+              selectedBranch === 'Online' 
+                ? 'bg-[#E9E0F5] font-bold ring-1 ring-[#8A6FAE]/40 text-[#5D4488]' 
+                : 'hover:opacity-80 text-[#333333]'
+            }`}
+            title={lang === 'th' ? 'กรองเฉพาะกิจกรรมออนไลน์' : 'Filter by Online events'}
+          >
+            <span className="w-3.5 h-3.5 rounded-full bg-[#8A6FAE] inline-flex items-center justify-center shadow-2xs flex-shrink-0">
+              {selectedBranch === 'Online' && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
+            </span>
+            <span className="leading-none">
+              {t.online}
             </span>
           </button>
         </div>
@@ -368,8 +391,20 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
                 </div>
               )}
 
+              {/* Online Event Indicator - positioned bottom-left, distinct from the top-right gold star */}
+              {day.hasOnlineEvent && (
+                <div 
+                  className="absolute pointer-events-none z-20 -bottom-1 -left-1"
+                  title={lang === 'th' ? 'มีกิจกรรมออนไลน์' : 'Has an online event'}
+                >
+                  <div className="w-4 h-4 rounded-full bg-[#8A6FAE] flex items-center justify-center shadow-xs border border-white">
+                    <Video className="w-2.5 h-2.5 text-white" strokeWidth={2.5} />
+                  </div>
+                </div>
+              )}
+
               {/* Multiple Events indicator dot if on non-pill day */}
-              {day.events.length > 0 && !day.hasSpecialStar && !pillClass && (
+              {day.events.length > 0 && !day.hasSpecialStar && !day.hasOnlineEvent && !pillClass && (
                 <span className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-[#E84D84]" />
               )}
 
@@ -398,7 +433,7 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
                         <span 
                           className="w-2 h-2 rounded-full inline-block"
                           style={{ 
-                            backgroundColor: day.branch === 'On-Tour' ? '#D4A373' : day.branch === 'Ratchathewi' ? '#F7C2D2' : '#FFFFFF' 
+                            backgroundColor: day.branch === 'Online' ? '#8A6FAE' : day.branch === 'On-Tour' ? '#D4A373' : day.branch === 'Ratchathewi' ? '#F7C2D2' : '#FFFFFF' 
                           }}
                         />
                         <span>{locName}</span>

@@ -171,6 +171,7 @@ adminRouter.post('/admin/events', authenticateToken, upload.single('photo'), (re
     const facilitatorRole = body.facilitatorRole || facilitatorObj?.role || 'Founder & Lead Somatic Alchemist';
     const facilitatorBio = body.facilitatorBio || facilitatorObj?.bio || 'Certified Sound Healing Practitioner and Holistic Facial Ritualist.';
     const useGlobalFacilitator = body.useGlobalFacilitator !== undefined ? (body.useGlobalFacilitator === 'true' || body.useGlobalFacilitator === true || body.useGlobalFacilitator === 1 ? 1 : 0) : 1;
+    const facilitatorId = body.facilitatorId !== undefined && body.facilitatorId !== '' ? body.facilitatorId : (useGlobalFacilitator ? 'default' : null);
 
     // Array fields
     const sensoryNotes = typeof body.sensoryNotes === 'string' ? body.sensoryNotes : JSON.stringify(body.sensoryNotes || []);
@@ -185,7 +186,7 @@ adminRouter.post('/admin/events', authenticateToken, upload.single('photo'), (re
       startTime, endTime, timeDisplay, durationMinutes, category,
       branch, capacity, bookedCount, status, priceThb, isFree, level,
       description, locationDetails, posterUrl, posterTag, subtitle,
-      facilitatorName, facilitatorRole, facilitatorBio, useGlobalFacilitator,
+      facilitatorName, facilitatorRole, facilitatorBio, useGlobalFacilitator, facilitatorId,
       sensoryNotes, benefits, preparationTips, adminNote,
       isSpecialStar, isFeatured
     ];
@@ -197,10 +198,10 @@ adminRouter.post('/admin/events', authenticateToken, upload.single('photo'), (re
         startTime, endTime, timeDisplay, durationMinutes, category,
         branch, capacity, bookedCount, status, priceThb, isFree, level,
         description, locationDetails, posterUrl, posterTag, subtitle,
-        facilitatorName, facilitatorRole, facilitatorBio, useGlobalFacilitator,
+        facilitatorName, facilitatorRole, facilitatorBio, useGlobalFacilitator, facilitatorId,
         sensoryNotes, benefits, preparationTips, adminNote,
         isSpecialStar, isFeatured, createdAt, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     `, params);
 
     saveDatabase();
@@ -232,7 +233,7 @@ adminRouter.put('/admin/events/:id', authenticateToken, upload.single('photo'), 
     const file = req.file;
 
     // Check if event exists
-    const check = db.exec("SELECT id, posterUrl FROM events WHERE id = ?", [id]);
+    const check = db.exec("SELECT id, posterUrl, facilitatorId FROM events WHERE id = ?", [id]);
     if (!check || check.length === 0 || check[0].values.length === 0) {
       res.status(404).json({
         success: false,
@@ -248,6 +249,11 @@ adminRouter.put('/admin/events/:id', authenticateToken, upload.single('photo'), 
       posterUrl = `/uploads/${file.filename}`;
     } else if (body.posterUrl !== undefined) {
       posterUrl = body.posterUrl;
+    }
+
+    let facilitatorId = check[0].values[0][2];
+    if (body.facilitatorId !== undefined) {
+      facilitatorId = body.facilitatorId && body.facilitatorId !== '' ? body.facilitatorId : null;
     }
 
     // Facilitator info
@@ -297,6 +303,7 @@ adminRouter.put('/admin/events/:id', authenticateToken, upload.single('photo'), 
       facilitatorRole,
       facilitatorBio,
       useGlobalFacilitator,
+      facilitatorId,
       sensoryNotes,
       benefits,
       preparationTips,
@@ -335,6 +342,7 @@ adminRouter.put('/admin/events/:id', authenticateToken, upload.single('photo'), 
         facilitatorRole = COALESCE(?, facilitatorRole),
         facilitatorBio = COALESCE(?, facilitatorBio),
         useGlobalFacilitator = COALESCE(?, useGlobalFacilitator),
+        facilitatorId = ?,
         sensoryNotes = COALESCE(?, sensoryNotes),
         benefits = COALESCE(?, benefits),
         preparationTips = COALESCE(?, preparationTips),
@@ -455,8 +463,40 @@ export function getAllStudioSettingsFromDb() {
     };
   }
 
-  // Facilitator
-  let facilitator = {
+  // Facilitators
+  const facilitators: any[] = [];
+  const facRes = db.exec("SELECT id, nameTh, nameEn, titleTh, titleEn, photoUrl, bioShortTh, bioShortEn, bioLongTh, bioLongEn, certifications, lineOa, email, phone, instagram, isActive, displayOrder FROM facilitator ORDER BY displayOrder ASC, id ASC");
+  if (facRes && facRes.length > 0) {
+    facRes[0].values.forEach(row => {
+      let certs: string[] = [];
+      try {
+        certs = row[10] ? JSON.parse(row[10] as string) : [];
+      } catch {
+        certs = [];
+      }
+      facilitators.push({
+        id: (row[0] as string) || 'default',
+        nameTh: (row[1] as string) || '',
+        nameEn: (row[2] as string) || '',
+        titleTh: (row[3] as string) || '',
+        titleEn: (row[4] as string) || '',
+        photoUrl: (row[5] as string) || '',
+        bioShortTh: (row[6] as string) || '',
+        bioShortEn: (row[7] as string) || '',
+        bioLongTh: (row[8] as string) || '',
+        bioLongEn: (row[9] as string) || '',
+        certifications: certs,
+        lineOa: (row[11] as string) || '',
+        email: (row[12] as string) || '',
+        phone: (row[13] as string) || '',
+        instagram: (row[14] as string) || '',
+        isActive: Boolean(row[15] !== undefined ? row[15] : 1),
+        displayOrder: Number(row[16] || 0)
+      });
+    });
+  }
+
+  let primaryFacilitator = facilitators.length > 0 ? facilitators[0] : {
     id: 'default',
     nameTh: 'Kru Beever (ครูบีเวอร์)',
     nameEn: 'Kru Beever (Supapit)',
@@ -471,34 +511,12 @@ export function getAllStudioSettingsFromDb() {
     lineOa: '@me.my.mind.mindful',
     email: 'me.my.mind.facialmassage@gmail.com',
     phone: '081-xxx-xxxx',
-    instagram: '@me.my.mind.mindful'
+    instagram: '@me.my.mind.mindful',
+    isActive: true,
+    displayOrder: 1
   };
-  const facRes = db.exec("SELECT id, nameTh, nameEn, titleTh, titleEn, photoUrl, bioShortTh, bioShortEn, bioLongTh, bioLongEn, certifications, lineOa, email, phone, instagram FROM facilitator WHERE id = 'default'");
-  if (facRes && facRes.length > 0 && facRes[0].values.length > 0) {
-    const [id, nameTh, nameEn, titleTh, titleEn, photoUrl, bioShortTh, bioShortEn, bioLongTh, bioLongEn, certsJson, lineOa, email, phone, instagram] = facRes[0].values[0];
-    let certs: string[] = [];
-    try {
-      certs = certsJson ? JSON.parse(certsJson as string) : [];
-    } catch {
-      certs = [];
-    }
-    facilitator = {
-      id: (id as string) || 'default',
-      nameTh: (nameTh as string) || '',
-      nameEn: (nameEn as string) || '',
-      titleTh: (titleTh as string) || '',
-      titleEn: (titleEn as string) || '',
-      photoUrl: (photoUrl as string) || '',
-      bioShortTh: (bioShortTh as string) || '',
-      bioShortEn: (bioShortEn as string) || '',
-      bioLongTh: (bioLongTh as string) || '',
-      bioLongEn: (bioLongEn as string) || '',
-      certifications: certs,
-      lineOa: (lineOa as string) || '',
-      email: (email as string) || '',
-      phone: (phone as string) || '',
-      instagram: (instagram as string) || ''
-    };
+  if (facilitators.length === 0) {
+    facilitators.push(primaryFacilitator);
   }
 
   // Branches
@@ -574,7 +592,7 @@ export function getAllStudioSettingsFromDb() {
     };
   }
 
-  return { studio, facilitator, branches, services, contact };
+  return { studio, facilitator: primaryFacilitator, facilitators, branches, services, contact };
 }
 
 /**
@@ -667,8 +685,192 @@ adminRouter.post('/admin/settings', upload.single('logo'), (req: Request, res: R
 });
 
 /**
- * POST /api/admin/facilitator
- * Update Facilitator Profile + Photo upload
+ * Facilitators Endpoints
+ */
+adminRouter.get('/admin/facilitators', (_req: Request, res: Response) => {
+  try {
+    const data = getAllStudioSettingsFromDb().facilitators;
+    res.json({ success: true, data });
+  } catch (error: any) {
+    console.error('[GET /admin/facilitators]', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+adminRouter.get('/admin/facilitators/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const facilitators = getAllStudioSettingsFromDb().facilitators;
+    const found = facilitators.find(f => f.id === id);
+    if (!found) {
+      res.status(404).json({ success: false, error: 'Facilitator not found' });
+      return;
+    }
+    res.json({ success: true, data: found });
+  } catch (error: any) {
+    console.error('[GET /admin/facilitators/:id]', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+adminRouter.post('/admin/facilitators', upload.single('photo'), (req: Request, res: Response) => {
+  try {
+    const body = req.body;
+    const file = req.file;
+    const db = getDatabase();
+    const id = body.id || `fac-${uuidv4().slice(0, 8)}`;
+    const photoUrl = file ? `/uploads/${file.filename}` : (body.photoUrl || '');
+
+    let certsJson = '[]';
+    if (typeof body.certifications === 'string') {
+      try {
+        certsJson = JSON.stringify(JSON.parse(body.certifications));
+      } catch {
+        certsJson = JSON.stringify([body.certifications]);
+      }
+    } else if (Array.isArray(body.certifications)) {
+      certsJson = JSON.stringify(body.certifications);
+    }
+
+    const facilitatorParams = [
+      id,
+      body.nameTh || '',
+      body.nameEn || '',
+      body.titleTh || '',
+      body.titleEn || '',
+      photoUrl,
+      body.bioShortTh || '',
+      body.bioShortEn || '',
+      body.bioLongTh || '',
+      body.bioLongEn || '',
+      certsJson,
+      body.lineOa || '',
+      body.email || '',
+      body.phone || '',
+      body.instagram || '',
+      body.isActive === false || body.isActive === 'false' ? 0 : 1,
+      Number(body.displayOrder || 0)
+    ].map(v => (v === undefined ? null : v));
+
+    db.run(`
+      INSERT OR REPLACE INTO facilitator (id, nameTh, nameEn, titleTh, titleEn, photoUrl, bioShortTh, bioShortEn, bioLongTh, bioLongEn, certifications, lineOa, email, phone, instagram, isActive, displayOrder, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `, facilitatorParams);
+
+    saveDatabase();
+    res.json({ success: true, message: 'Facilitator profile saved', data: { id, photoUrl } });
+  } catch (error: any) {
+    console.error('[POST /admin/facilitators]', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+adminRouter.put('/admin/facilitators/:id', upload.single('photo'), (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const body = req.body;
+    const file = req.file;
+    const db = getDatabase();
+
+    const check = db.exec("SELECT photoUrl FROM facilitator WHERE id = ?", [id]);
+    const currentPhoto = check && check.length > 0 && check[0].values.length > 0 ? check[0].values[0][0] : '';
+    let photoUrl = currentPhoto;
+    if (file) {
+      photoUrl = `/uploads/${file.filename}`;
+    } else if (body.photoUrl !== undefined) {
+      photoUrl = body.photoUrl;
+    }
+
+    let certsJson: string | null = null;
+    if (body.certifications !== undefined) {
+      if (typeof body.certifications === 'string') {
+        try {
+          certsJson = JSON.stringify(JSON.parse(body.certifications));
+        } catch {
+          certsJson = JSON.stringify([body.certifications]);
+        }
+      } else if (Array.isArray(body.certifications)) {
+        certsJson = JSON.stringify(body.certifications);
+      }
+    }
+
+    const facilitatorParams = [
+      body.nameTh,
+      body.nameEn,
+      body.titleTh,
+      body.titleEn,
+      photoUrl,
+      body.bioShortTh,
+      body.bioShortEn,
+      body.bioLongTh,
+      body.bioLongEn,
+      certsJson,
+      body.lineOa,
+      body.email,
+      body.phone,
+      body.instagram,
+      body.isActive !== undefined ? (body.isActive === true || body.isActive === 'true' ? 1 : 0) : null,
+      body.displayOrder !== undefined ? Number(body.displayOrder) : null,
+      id
+    ].map(v => (v === undefined ? null : v));
+
+    db.run(`
+      UPDATE facilitator SET
+        nameTh = COALESCE(?, nameTh),
+        nameEn = COALESCE(?, nameEn),
+        titleTh = COALESCE(?, titleTh),
+        titleEn = COALESCE(?, titleEn),
+        photoUrl = ?,
+        bioShortTh = COALESCE(?, bioShortTh),
+        bioShortEn = COALESCE(?, bioShortEn),
+        bioLongTh = COALESCE(?, bioLongTh),
+        bioLongEn = COALESCE(?, bioLongEn),
+        certifications = COALESCE(?, certifications),
+        lineOa = COALESCE(?, lineOa),
+        email = COALESCE(?, email),
+        phone = COALESCE(?, phone),
+        instagram = COALESCE(?, instagram),
+        isActive = COALESCE(?, isActive),
+        displayOrder = COALESCE(?, displayOrder),
+        updatedAt = datetime('now')
+      WHERE id = ?
+    `, facilitatorParams);
+
+    saveDatabase();
+    res.json({ success: true, message: 'Facilitator profile updated', data: { id, photoUrl } });
+  } catch (error: any) {
+    console.error('[PUT /admin/facilitators/:id]', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+adminRouter.delete('/admin/facilitators/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+
+    const countRes = db.exec("SELECT COUNT(*) FROM facilitator");
+    if (countRes && countRes[0]?.values[0]?.[0] <= 1) {
+      res.status(400).json({ success: false, error: 'Cannot delete the only remaining facilitator profile.' });
+      return;
+    }
+
+    // Set any event referencing this facilitator to NULL or fallback
+    try {
+      db.run("UPDATE events SET facilitatorId = NULL WHERE facilitatorId = ?", [id]);
+    } catch {}
+
+    db.run("DELETE FROM facilitator WHERE id = ?", [id]);
+    saveDatabase();
+    res.json({ success: true, message: 'Facilitator deleted' });
+  } catch (error: any) {
+    console.error('[DELETE /admin/facilitators/:id]', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Backward compatibility alias: POST /api/admin/facilitator (updates 'default' facilitator)
  */
 adminRouter.post('/admin/facilitator', upload.single('photo'), (req: Request, res: Response) => {
   try {
@@ -711,12 +913,14 @@ adminRouter.post('/admin/facilitator', upload.single('photo'), (req: Request, re
       body.lineOa || '',
       body.email || '',
       body.phone || '',
-      body.instagram || ''
+      body.instagram || '',
+      body.isActive === false || body.isActive === 'false' ? 0 : 1,
+      Number(body.displayOrder || 1)
     ].map(v => (v === undefined ? null : v));
 
     db.run(`
-      INSERT OR REPLACE INTO facilitator (id, nameTh, nameEn, titleTh, titleEn, photoUrl, bioShortTh, bioShortEn, bioLongTh, bioLongEn, certifications, lineOa, email, phone, instagram, updatedAt)
-      VALUES ('default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      INSERT OR REPLACE INTO facilitator (id, nameTh, nameEn, titleTh, titleEn, photoUrl, bioShortTh, bioShortEn, bioLongTh, bioLongEn, certifications, lineOa, email, phone, instagram, isActive, displayOrder, updatedAt)
+      VALUES ('default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     `, facilitatorParams);
 
     saveDatabase();

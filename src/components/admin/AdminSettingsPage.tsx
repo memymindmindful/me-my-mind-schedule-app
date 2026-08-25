@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Building2, 
-  User, 
+  Users, 
   MapPin, 
   Sparkles, 
   MessageCircle, 
@@ -21,14 +21,15 @@ import { DEFAULT_STUDIO_SETTINGS } from '../../utils/adminStorage';
 import { 
   apiFetchStudioSettings, 
   apiSaveStudioSettings, 
-  apiSaveFacilitator, 
+  apiSaveFacilitatorItem,
+  apiDeleteFacilitatorItem, 
   apiSaveBranch, 
   apiDeleteBranch, 
   apiSaveService, 
   apiDeleteService 
 } from '../../utils/apiClient';
 import { StudioInfoEditor } from './StudioInfoEditor';
-import { FacilitatorEditor } from './FacilitatorEditor';
+import { FacilitatorsEditor } from './FacilitatorsEditor';
 import { BranchesEditor } from './BranchesEditor';
 import { ServicesEditor } from './ServicesEditor';
 import { ContactInfoEditor } from './ContactInfoEditor';
@@ -48,9 +49,14 @@ export const AdminSettingsPage: React.FC = () => {
       try {
         const remote = await apiFetchStudioSettings();
         if (remote && isMounted) {
+          const facilitatorsList = Array.isArray(remote.facilitators) && remote.facilitators.length > 0
+            ? remote.facilitators
+            : (remote.facilitator ? [remote.facilitator] : DEFAULT_STUDIO_SETTINGS.facilitators);
+
           const merged: AllStudioSettings = {
             studio: remote.studio || DEFAULT_STUDIO_SETTINGS.studio,
             facilitator: remote.facilitator || DEFAULT_STUDIO_SETTINGS.facilitator,
+            facilitators: facilitatorsList,
             branches: Array.isArray(remote.branches) && remote.branches.length > 0 ? remote.branches : DEFAULT_STUDIO_SETTINGS.branches,
             services: Array.isArray(remote.services) && remote.services.length > 0 ? remote.services : DEFAULT_STUDIO_SETTINGS.services,
             contact: remote.contact || DEFAULT_STUDIO_SETTINGS.contact
@@ -96,27 +102,66 @@ export const AdminSettingsPage: React.FC = () => {
     }
   };
 
-  // Save Facilitator
-  const handleSaveFacilitator = async (data: FacilitatorProfile, photoFile?: File) => {
+  // Save Facilitator (Create / Update in multi-facilitator list)
+  const handleSaveFacilitator = async (fac: FacilitatorProfile, photoFile?: File) => {
     setIsSaving(true);
     try {
-      const res = await apiSaveFacilitator(data, photoFile);
-      const updatedPhoto = res?.data?.photoUrl || data.photoUrl;
-      const updated: AllStudioSettings = {
-        ...settings,
-        facilitator: { ...data, photoUrl: updatedPhoto }
+      const isExisting = (settings.facilitators || []).some(f => f.id === fac.id);
+      const res = await apiSaveFacilitatorItem(fac, photoFile, isExisting ? fac.id : undefined);
+      const updatedPhoto = res?.data?.photoUrl || fac.photoUrl;
+      const facWithPhoto = { ...fac, photoUrl: updatedPhoto };
+
+      let updatedFacilitators: FacilitatorProfile[];
+      if (isExisting) {
+        updatedFacilitators = (settings.facilitators || []).map(f => f.id === fac.id ? facWithPhoto : f);
+      } else {
+        updatedFacilitators = [...(settings.facilitators || []), facWithPhoto];
+      }
+
+      const updated: AllStudioSettings = { 
+        ...settings, 
+        facilitators: updatedFacilitators,
+        facilitator: updatedFacilitators[0] || facWithPhoto
       };
       setSettings(updated);
       window.dispatchEvent(new CustomEvent('mmm_settings_updated', { detail: updated }));
-      showToast('บันทึกข้อมูลครูผู้บำบัดเรียบร้อยแล้ว');
+      showToast('บันทึกข้อมูลครูผู้สอนเรียบร้อยแล้ว');
     } catch (err) {
       console.error(err);
-      const updated: AllStudioSettings = { ...settings, facilitator: data };
+      const isExisting = (settings.facilitators || []).some(f => f.id === fac.id);
+      const updatedFacilitators = isExisting
+        ? (settings.facilitators || []).map(f => f.id === fac.id ? fac : f)
+        : [...(settings.facilitators || []), fac];
+      const updated: AllStudioSettings = { 
+        ...settings, 
+        facilitators: updatedFacilitators,
+        facilitator: updatedFacilitators[0] || fac
+      };
       setSettings(updated);
-      showToast('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      showToast('บันทึกข้อมูลครูผู้สอนเรียบร้อยแล้ว');
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Delete Facilitator
+  const handleDeleteFacilitator = async (id: string) => {
+    setIsSaving(true);
+    try {
+      await apiDeleteFacilitatorItem(id);
+    } catch (err) {
+      console.warn('API delete facilitator fallback:', err);
+    }
+    const updatedFacilitators = (settings.facilitators || []).filter(f => f.id !== id);
+    const updated: AllStudioSettings = { 
+      ...settings, 
+      facilitators: updatedFacilitators,
+      facilitator: updatedFacilitators[0] || settings.facilitator
+    };
+    setSettings(updated);
+    window.dispatchEvent(new CustomEvent('mmm_settings_updated', { detail: updated }));
+    setIsSaving(false);
+    showToast('ลบโปรไฟล์ครูเรียบร้อยแล้ว');
   };
 
   // Save Branch (Create / Update)
@@ -274,8 +319,8 @@ export const AdminSettingsPage: React.FC = () => {
               : 'text-[#666] hover:text-[#1E1E1E] hover:bg-black/5'
           }`}
         >
-          <User className="w-3.5 h-3.5" />
-          <span>โปรไฟล์ครู (Kru Beever)</span>
+          <Users className="w-3.5 h-3.5" />
+          <span>ครูผู้สอน (Facilitators)</span>
         </button>
 
         <button
@@ -328,9 +373,10 @@ export const AdminSettingsPage: React.FC = () => {
       )}
 
       {activeSubTab === 'facilitator' && (
-        <FacilitatorEditor
-          initialData={settings.facilitator}
-          onSave={handleSaveFacilitator}
+        <FacilitatorsEditor
+          facilitators={settings.facilitators || (settings.facilitator ? [settings.facilitator] : [])}
+          onSaveFacilitator={handleSaveFacilitator}
+          onDeleteFacilitator={handleDeleteFacilitator}
           isSaving={isSaving}
         />
       )}

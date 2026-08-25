@@ -43,6 +43,7 @@ export function mapRowToEvent(columns: string[], row: any[]) {
     posterTag: obj.posterTag || '',
     subtitle: obj.subtitle || '',
     useGlobalFacilitator: obj.useGlobalFacilitator !== undefined ? (obj.useGlobalFacilitator === 1 || obj.useGlobalFacilitator === '1' || obj.useGlobalFacilitator === true) : true,
+    facilitatorId: obj.facilitatorId !== undefined && obj.facilitatorId !== '' ? obj.facilitatorId : (obj.useGlobalFacilitator !== false ? 'default' : null),
     facilitator: {
       name: obj.facilitatorName || 'Kru Beever (Supapit)',
       role: obj.facilitatorRole || 'Founder & Lead Somatic Alchemist',
@@ -58,6 +59,54 @@ export function mapRowToEvent(columns: string[], row: any[]) {
     updatedAt: obj.updatedAt
   };
 }
+
+/**
+ * GET /api/facilitators
+ * Returns active facilitators from database
+ */
+eventsRouter.get('/facilitators', (_req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const result = db.exec("SELECT id, nameTh, nameEn, titleTh, titleEn, photoUrl, bioShortTh, bioShortEn, bioLongTh, bioLongEn, certifications, lineOa, email, phone, instagram, isActive, displayOrder FROM facilitator WHERE isActive = 1 ORDER BY displayOrder ASC, id ASC");
+    if (!result || result.length === 0) {
+      res.json({
+        success: true,
+        data: []
+      });
+      return;
+    }
+    const facilitators = result[0].values.map(row => {
+      let certs: string[] = [];
+      try {
+        certs = row[10] ? JSON.parse(row[10] as string) : [];
+      } catch {
+        certs = [];
+      }
+      return {
+        id: row[0],
+        nameTh: row[1] || '',
+        nameEn: row[2] || '',
+        titleTh: row[3] || '',
+        titleEn: row[4] || '',
+        photoUrl: row[5] || '',
+        bioShortTh: row[6] || '',
+        bioShortEn: row[7] || '',
+        bioLongTh: row[8] || '',
+        bioLongEn: row[9] || '',
+        certifications: certs,
+        lineOa: row[11] || '',
+        email: row[12] || '',
+        phone: row[13] || '',
+        instagram: row[14] || '',
+        isActive: Boolean(row[15] !== undefined ? row[15] : 1),
+        displayOrder: Number(row[16] || 0)
+      };
+    });
+    res.json({ success: true, data: facilitators });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 /**
  * GET /api/branches

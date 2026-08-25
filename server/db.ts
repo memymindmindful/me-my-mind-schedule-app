@@ -90,6 +90,25 @@ export async function initDatabase(): Promise<Database> {
     // Column already exists
   }
 
+  // Safe migration for facilitatorId column on events
+  try {
+    db.run("ALTER TABLE events ADD COLUMN facilitatorId TEXT");
+  } catch {
+    // Column already exists
+  }
+
+  // Safe migration: map existing useGlobalFacilitator events to default facilitatorId
+  try {
+    db.run(`
+      UPDATE events 
+      SET facilitatorId = 'default' 
+      WHERE (useGlobalFacilitator = 1 OR useGlobalFacilitator = '1') 
+        AND (facilitatorId IS NULL OR facilitatorId = '')
+    `);
+  } catch (err) {
+    console.error('[DB Migration] Failed to migrate events facilitatorId:', err);
+  }
+
   // Safe migration: synchronize date column with dateStr for all existing events
   try {
     db.run("UPDATE events SET date = dateStr WHERE dateStr IS NOT NULL AND dateStr != '' AND date != dateStr");
@@ -167,9 +186,19 @@ export async function initDatabase(): Promise<Database> {
       email TEXT,
       phone TEXT,
       instagram TEXT,
+      isActive INTEGER DEFAULT 1,
+      displayOrder INTEGER DEFAULT 0,
       updatedAt TEXT DEFAULT (datetime('now'))
     );
   `);
+
+  // Safe migrations for facilitator columns
+  try {
+    db.run("ALTER TABLE facilitator ADD COLUMN isActive INTEGER DEFAULT 1");
+  } catch {}
+  try {
+    db.run("ALTER TABLE facilitator ADD COLUMN displayOrder INTEGER DEFAULT 0");
+  } catch {}
 
   // Branches
   db.run(`
@@ -290,8 +319,30 @@ export async function initDatabase(): Promise<Database> {
       VALUES 
       ('branch-nakhonsawan', 'Nakhonsawan', 'สาขาหลักนครสวรรค์', 'Nakhonsawan Main Sanctuary', 'สวนสงบและสตูดิโอหลักแห่งการฟื้นฟู', 'Headquarters Sanctuary & Garden Studio', '88/4 ถนนสวรรค์วิถี ปากน้ำโพ เมือง นครสวรรค์ 60000', '88/4 Sawan Vithi Road, Pak Nam Pho, Mueang, Nakhon Sawan 60000', 'Sanctuary Garden ใกล้ Paradise Park', 'Sanctuary Garden near Paradise Park', '#FFFFFF', '#FDFBF7', '#2B2B2B', 1, 1),
       ('branch-ratchathewi', 'Ratchathewi', 'สาขาราชเทวี กรุงเทพฯ', 'Bangkok City Loft (Ratchathewi)', 'สตูดิโอกลางเมือง & เวิร์กช็อปสุดสัปดาห์', 'Bangkok City Loft & Weekend Workshop Space', 'อาคารพญาไทพลาซ่า ชั้น 5 ถนนพญาไท ราชเทวี กรุงเทพฯ 10400', 'Phayathai Plaza Building, 5th Floor, Phayathai Rd, Ratchathewi, Bangkok 10400', 'BTS ราชเทวี ทางออก 2 มีทางเชื่อมตรงเข้าตึก', 'BTS Ratchathewi (Direct Skywalk Exit 2)', '#F8C8D7', '#F9D7E1', '#8E2849', 1, 2),
-      ('branch-ontour', 'On-Tour', 'ทัวร์ต่างจังหวัด / Private Retreats', 'On-Tour & Private Retreats', 'รีทรีตธรรมชาติ & ไพรเวตองค์กรทั่วประเทศ', 'Private Retreats & Corporate Mindfulness Immersions', 'จัดนอกสถานที่ทั่วประเทศ (เชียงใหม่, ภูเก็ต, หัวหิน & องค์กร)', 'On-location Across Thailand (Chiang Mai, Phuket, Hua Hin & Corporate)', 'สถานที่ธรรมชาติและรีสอร์ทที่คัดสรรพิเศษ', 'Bespoke On-Site Venues & Nature Resorts', '#A67863', '#A67863', '#FFFFFF', 1, 3);
+      ('branch-ontour', 'On-Tour', 'ทัวร์ต่างจังหวัด / Private Retreats', 'On-Tour & Private Retreats', 'รีทรีตธรรมชาติ & ไพรเวตองค์กรทั่วประเทศ', 'Private Retreats & Corporate Mindfulness Immersions', 'จัดนอกสถานที่ทั่วประเทศ (เชียงใหม่, ภูเก็ต, หัวหิน & องค์กร)', 'On-location Across Thailand (Chiang Mai, Phuket, Hua Hin & Corporate)', 'สถานที่ธรรมชาติและรีสอร์ทที่คัดสรรพิเศษ', 'Bespoke On-Site Venues & Nature Resorts', '#A67863', '#A67863', '#FFFFFF', 1, 3),
+      ('branch-online', 'Online', 'ออนไลน์ (Zoom / Live)', 'Online Virtual Sessions', 'เซสชันออนไลน์ผ่าน Zoom & การทำสมาธิทางไกล', 'Virtual Live Sessions & Remote Meditations', 'เข้าร่วมผ่าน Zoom / Google Meet (ลิงก์ส่งให้หลังยืนยันการจอง)', 'Live via Zoom / Google Meet link provided upon booking', 'ออนไลน์จากที่บ้าน / ทุกที่ที่คุณสะดวก', 'Join from home or anywhere comfortable', '#8A6FAE', '#E9E0F5', '#5D4488', 1, 4);
     `);
+  } else {
+    // Migration: ensure branch-online exists in branches table
+    try {
+      const checkOnline = db.exec("SELECT COUNT(*) FROM branches WHERE branchKey = 'Online' OR id = 'branch-online'");
+      if (!checkOnline || checkOnline[0]?.values[0]?.[0] === 0) {
+        db.run(`
+          INSERT INTO branches (id, branchKey, nameTh, nameEn, taglineTh, taglineEn, addressTh, addressEn, landmarkTh, landmarkEn, dotColor, pillBg, textColor, isActive, displayOrder)
+          VALUES ('branch-online', 'Online', 'ออนไลน์ (Zoom / Live)', 'Online Virtual Sessions', 'เซสชันออนไลน์ผ่าน Zoom & การทำสมาธิทางไกล', 'Virtual Live Sessions & Remote Meditations', 'เข้าร่วมผ่าน Zoom / Google Meet (ลิงก์ส่งให้หลังยืนยันการจอง)', 'Live via Zoom / Google Meet link provided upon booking', 'ออนไลน์จากที่บ้าน / ทุกที่ที่คุณสะดวก', 'Join from home or anywhere comfortable', '#8A6FAE', '#E9E0F5', '#5D4488', 1, 4)
+        `);
+        console.log('[DB Migration] Added Online branch to branches table.');
+      } else {
+        // Update to lavender if previously saved with blue #3B82F6
+        db.run(`
+          UPDATE branches 
+          SET dotColor = '#8A6FAE', pillBg = '#E9E0F5', textColor = '#5D4488'
+          WHERE (branchKey = 'Online' OR id = 'branch-online') AND (dotColor = '#3B82F6' OR pillBg = '#DBEAFE')
+        `);
+      }
+    } catch (err) {
+      console.error('[DB Migration] Failed to check/add/update Online branch:', err);
+    }
   }
 
   // Seed default Services if empty

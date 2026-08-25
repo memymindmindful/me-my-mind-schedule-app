@@ -12,9 +12,11 @@ export const TRANSLATIONS = {
     nakhonsawan: 'นครสวรรค์',
     ratchathewi: 'ราชเทวี',
     onTour: 'ออนทัวร์',
+    online: 'ออนไลน์',
     nakhonsawanFull: 'สาขาหลักนครสวรรค์',
     ratchathewiFull: 'สาขาราชเทวี (กรุงเทพฯ)',
     onTourFull: 'ออนทัวร์ / Private Retreat',
+    onlineFull: 'ออนไลน์ (Zoom / Live)',
     monthNames: [
       'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
       'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
@@ -95,9 +97,11 @@ export const TRANSLATIONS = {
     nakhonsawan: 'Nakhonsawan',
     ratchathewi: 'Ratchathewi',
     onTour: 'On-Tour',
+    online: 'Online',
     nakhonsawanFull: 'Nakhonsawan Main Sanctuary',
     ratchathewiFull: 'Ratchathewi Branch (Bangkok)',
     onTourFull: 'On-Tour Retreats & Private',
+    onlineFull: 'Online Live Sessions',
     monthNames: [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'

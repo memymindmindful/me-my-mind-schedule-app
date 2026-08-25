@@ -9,7 +9,8 @@ import {
   Share2, 
   Sparkles, 
   MessageCircle,
-  Heart
+  Heart,
+  Video
 } from 'lucide-react';
 import { ScheduleEvent, BookingSubmission, FacilitatorInfo } from '../types';
 import { BRANCH_INFO } from '../data/scheduleData';
@@ -24,6 +25,7 @@ interface EventDetailModalProps {
   lang: Language;
   onShowToast?: (message: string) => void;
   globalFacilitator?: FacilitatorInfo | null;
+  facilitators?: FacilitatorInfo[];
 }
 
 export const EventDetailModal: React.FC<EventDetailModalProps> = ({
@@ -32,7 +34,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   onConfirmBooking,
   lang,
   onShowToast,
-  globalFacilitator
+  globalFacilitator,
+  facilitators
 }) => {
   if (!event) return null;
 
@@ -64,9 +67,29 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
     ? (lang === 'th' ? 'ฟรี (FREE)' : 'Free')
     : `฿${event.priceThb.toLocaleString()} THB`;
 
-  // Compute live effective facilitator details (Sync with Global Profile or Event Custom Override)
+  // Compute live effective facilitator details (Sync with Multi-Facilitator Profile, Global Profile, or Custom Override)
   const useGlobal = event.useGlobalFacilitator !== false;
   const effectiveFacilitator = useMemo(() => {
+    // 1. Check if linked to a specific registered facilitator ID in the multi-facilitator list
+    if (event.facilitatorId && facilitators && facilitators.length > 0) {
+      const matched = facilitators.find(f => f.id === event.facilitatorId);
+      if (matched) {
+        return {
+          name: lang === 'th' 
+            ? (matched.nameTh || matched.nameEn || 'Kru Beever')
+            : (matched.nameEn || matched.nameTh || 'Kru Beever'),
+          role: lang === 'th'
+            ? (matched.titleTh || matched.titleEn || 'Lead Facilitator')
+            : (matched.titleEn || matched.titleTh || 'Lead Facilitator'),
+          bio: lang === 'th'
+            ? (matched.bioShortTh || matched.bioLongTh || matched.bioShortEn || '')
+            : (matched.bioShortEn || matched.bioLongEn || matched.bioShortTh || ''),
+          avatarUrl: matched.photoUrl || ''
+        };
+      }
+    }
+
+    // 2. If useGlobal is true, use the primary/global facilitator
     if (useGlobal && globalFacilitator) {
       return {
         name: lang === 'th' 
@@ -81,13 +104,15 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
         avatarUrl: globalFacilitator.photoUrl || event.facilitator?.avatarUrl
       };
     }
+
+    // 3. Fallback to event's embedded custom facilitator info
     return {
       name: event.facilitator?.name || 'Kru Beever (Supapit)',
       role: event.facilitator?.role || 'Lead Facilitator',
       bio: event.facilitator?.bio || '',
       avatarUrl: event.facilitator?.avatarUrl
     };
-  }, [useGlobal, globalFacilitator, event.facilitator, lang]);
+  }, [event.facilitatorId, facilitators, useGlobal, globalFacilitator, event.facilitator, lang]);
 
   const initials = useMemo(() => {
     if (!effectiveFacilitator.name) return 'KB';
@@ -188,16 +213,27 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
 
           {/* Poster Top Badges */}
           <div className="absolute top-3.5 left-3.5 flex items-center gap-1.5 z-10">
-            <span 
-              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-white shadow-md backdrop-blur-md"
-              style={{
-                backgroundColor: event.branch === 'On-Tour' ? '#9E674F' : '#E84D84'
-              }}
-            >
-              <MapPin className="w-3 h-3" />
-              <span>{branchName}</span>
-            </span>
+            {event.branch === 'Online' ? (
+              <span 
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-white shadow-md backdrop-blur-md"
+                style={{ backgroundColor: '#8A6FAE' }}
+              >
+                <Video className="w-3 h-3" />
+                <span>{t.online}</span>
+              </span>
+            ) : (
+              <span 
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-white shadow-md backdrop-blur-md"
+                style={{
+                  backgroundColor: event.branch === 'On-Tour' ? '#9E674F' : '#E84D84'
+                }}
+              >
+                <MapPin className="w-3 h-3" />
+                <span>{branchName}</span>
+              </span>
+            )}
 
+            {/* isSpecialStar badge — independent of branch */}
             {event.isSpecialStar && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FFF4DC] text-[#8C5D00] shadow-md border border-[#FDE1A6]">
                 <Sparkles className="w-2.5 h-2.5 text-[#FDB827]" />
@@ -274,8 +310,12 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
 
                 <div className="col-span-2 pt-1 border-t border-[#EAE3DC] flex items-center justify-between text-xs">
                   <span className="text-[#666] flex items-center gap-1 truncate pr-2">
-                    <MapPin className="w-3.5 h-3.5 text-[#E84D84] flex-shrink-0" />
-                    <span className="truncate">{event.locationDetails}</span>
+                    {event.branch === 'Online' ? (
+                      <Video className="w-3.5 h-3.5 text-[#8A6FAE] flex-shrink-0" />
+                    ) : (
+                      <MapPin className="w-3.5 h-3.5 text-[#E84D84] flex-shrink-0" />
+                    )}
+                    <span className="truncate">{event.locationDetails || (event.branch === 'Online' ? (lang === 'th' ? 'เข้าร่วมออนไลน์ผ่าน Zoom' : 'Join Online via Zoom') : branchName)}</span>
                   </span>
                   <span className={`font-bold whitespace-nowrap ${isEventFree ? 'text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200' : 'text-[#E84D84]'}`}>
                     {priceDisplayStr}

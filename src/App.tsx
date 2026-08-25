@@ -411,6 +411,7 @@ export default function App() {
         onConfirmBooking={handleConfirmBooking}
         lang={lang}
         globalFacilitator={studioSettings?.facilitator}
+        facilitators={studioSettings?.facilitators || (studioSettings?.facilitator ? [studioSettings.facilitator] : [])}
         onShowToast={(msg) => {
           setToastMessage(msg);
           setTimeout(() => setToastMessage(null), 3500);

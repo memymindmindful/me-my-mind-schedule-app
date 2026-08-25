@@ -39,8 +39,36 @@ export const DEFAULT_STUDIO_SETTINGS: AllStudioSettings = {
     lineOa: '@me.my.mind.mindful',
     email: 'me.my.mind.facialmassage@gmail.com',
     phone: '081-xxx-xxxx',
-    instagram: '@me.my.mind.mindful'
+    instagram: '@me.my.mind.mindful',
+    isActive: true,
+    displayOrder: 1
   },
+  facilitators: [
+    {
+      id: 'default',
+      nameTh: 'Kru Beever (ครูบีเวอร์)',
+      nameEn: 'Kru Beever (Supapit)',
+      titleTh: 'ผู้ก่อตั้ง & ผู้เชี่ยวชาญการบำบัด Somatic Alchemy',
+      titleEn: 'Founder & Lead Somatic Alchemist',
+      photoUrl: '',
+      bioShortTh: 'ผู้บำบัดคลื่นเสียงและศาสตร์นวดหน้ายกกระชับกล้ามเนื้อใบหน้า ประสบการณ์กว่า 10 ปี มุ่งเน้นการคืนความสมดุลให้ระบบประสาทและร่างกาย',
+      bioShortEn: 'Certified Sound Healing Practitioner, Advanced Facial Massage Ritualist, and Kundalini Yoga guide at Me.My.Mind Mindfulness Studio. Dedicated to nervous system restoration and mindful body connection.',
+      bioLongTh: 'เชี่ยวชาญด้าน Sound Alchemy, Facial Reflexology, Lymphatic Drainage และการผ่อนคลายกล้ามเนื้อสะสมความเครียดเพื่อการฟื้นฟูระบบประสาทองค์รวม',
+      bioLongEn: 'Dedicated to somatic alignment, nervous system recalibration, and conscious inner stillness.',
+      certifications: [
+        'Certified Sound Healing Alchemist (Nepal & UK Academy)',
+        'Advanced Thai & Oriental Facial Acupressure Therapist',
+        'KRI Certified Kundalini Yoga Teacher',
+        'Usui Reiki Master Level 3'
+      ],
+      lineOa: '@me.my.mind.mindful',
+      email: 'me.my.mind.facialmassage@gmail.com',
+      phone: '081-xxx-xxxx',
+      instagram: '@me.my.mind.mindful',
+      isActive: true,
+      displayOrder: 1
+    }
+  ],
   branches: [
     {
       id: 'branch-nakhonsawan',
@@ -95,6 +123,24 @@ export const DEFAULT_STUDIO_SETTINGS: AllStudioSettings = {
       photoUrl: '',
       isActive: true,
       displayOrder: 3
+    },
+    {
+      id: 'branch-online',
+      branchKey: 'Online',
+      nameTh: 'ออนไลน์ (Zoom / Live)',
+      nameEn: 'Online Virtual Sessions',
+      taglineTh: 'เซสชันออนไลน์ผ่าน Zoom & การทำสมาธิทางไกล',
+      taglineEn: 'Virtual Live Sessions & Remote Meditations',
+      addressTh: 'เข้าร่วมผ่าน Zoom / Google Meet (ลิงก์ส่งให้หลังยืนยันการจอง)',
+      addressEn: 'Live via Zoom / Google Meet link provided upon booking',
+      landmarkTh: 'ออนไลน์จากที่บ้าน / ทุกที่ที่คุณสะดวก',
+      landmarkEn: 'Join from home or anywhere comfortable',
+      dotColor: '#8A6FAE',
+      pillBg: '#E9E0F5',
+      textColor: '#5D4488',
+      photoUrl: '',
+      isActive: true,
+      displayOrder: 4
     }
   ],
   services: [

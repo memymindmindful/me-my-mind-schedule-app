@@ -144,42 +144,56 @@ export const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({
             </div>
           </div>
 
-          {/* Facilitator Profile */}
-          <div className="p-4 rounded-2xl bg-[#FAF0F3] border border-[#F8DDE5] space-y-2.5">
-            <div className="flex items-center gap-3">
-              {facilitator.photoUrl ? (
-                <img
-                  src={facilitator.photoUrl}
-                  alt={facilitator.nameEn}
-                  className="w-11 h-11 rounded-full object-cover border border-[#F3CDD8] shadow-xs"
-                />
-              ) : (
-                <div className="w-11 h-11 rounded-full bg-[#E84D84] text-white flex items-center justify-center font-bold text-base shadow-sm flex-shrink-0">
-                  KB
-                </div>
-              )}
-              <div>
-                <h4 className="font-bold text-sm text-[#1E1E1E]">
-                  {lang === 'th' ? facilitator.nameTh : facilitator.nameEn}
-                </h4>
-                <span className="text-[11px] text-[#E84D84] font-semibold">
-                  {lang === 'th' ? facilitator.titleTh : facilitator.titleEn}
-                </span>
-              </div>
-            </div>
-            <p className="text-[#555] leading-relaxed">
-              {lang === 'th' ? (facilitator.bioShortTh || facilitator.bioShortEn) : (facilitator.bioShortEn || facilitator.bioShortTh)}
-            </p>
-            {facilitator.certifications && facilitator.certifications.length > 0 && (
-              <div className="space-y-1 pt-1 border-t border-[#F3CDD8]">
-                {facilitator.certifications.map((c, idx) => (
-                  <div key={idx} className="flex items-center gap-1.5 text-[11px] text-[#666]">
-                    <Award className="w-3 h-3 text-[#E84D84] flex-shrink-0" />
-                    <span>{c}</span>
+          {/* Facilitators List */}
+          <div className="space-y-2.5">
+            <h4 className="font-bold uppercase tracking-wider text-[#888] flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-[#E84D84]" />
+              <span>{lang === 'th' ? 'ทีมครูและผู้บำบัด (Facilitators)' : 'Studio Facilitators'}</span>
+            </h4>
+
+            {(settings.facilitators && settings.facilitators.length > 0 
+              ? settings.facilitators 
+              : [facilitator]
+            ).map((fac, fIdx) => (
+              <div key={fac.id || `fac-${fIdx}`} className="p-4 rounded-2xl bg-[#FAF0F3] border border-[#F8DDE5] space-y-2.5">
+                <div className="flex items-center gap-3">
+                  {fac.photoUrl ? (
+                    <img
+                      src={fac.photoUrl}
+                      alt={fac.nameEn || fac.nameTh}
+                      className="w-11 h-11 rounded-full object-cover border border-[#F3CDD8] shadow-xs flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-11 h-11 rounded-full bg-[#E84D84] text-white flex items-center justify-center font-bold text-sm shadow-sm flex-shrink-0">
+                      {fac.nameTh ? fac.nameTh.slice(0, 2) : 'KB'}
+                    </div>
+                  )}
+                  <div>
+                    <h4 className="font-bold text-sm text-[#1E1E1E]">
+                      {lang === 'th' ? (fac.nameTh || fac.nameEn) : (fac.nameEn || fac.nameTh)}
+                    </h4>
+                    <span className="text-[11px] text-[#E84D84] font-semibold block">
+                      {lang === 'th' ? (fac.titleTh || fac.titleEn) : (fac.titleEn || fac.titleTh)}
+                    </span>
                   </div>
-                ))}
+                </div>
+                <p className="text-[#555] leading-relaxed text-xs">
+                  {lang === 'th' 
+                    ? (fac.bioShortTh || fac.bioLongTh || fac.bioShortEn) 
+                    : (fac.bioShortEn || fac.bioLongEn || fac.bioShortTh)}
+                </p>
+                {fac.certifications && fac.certifications.length > 0 && (
+                  <div className="space-y-1 pt-1 border-t border-[#F3CDD8]">
+                    {fac.certifications.map((c, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5 text-[11px] text-[#666]">
+                        <Award className="w-3 h-3 text-[#E84D84] flex-shrink-0" />
+                        <span>{c}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            ))}
           </div>
 
           {/* Studio Branches */}

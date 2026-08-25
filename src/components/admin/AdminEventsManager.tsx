@@ -102,6 +102,7 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
 
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [globalFacilitator, setGlobalFacilitator] = useState<FacilitatorInfo | null>(null);
+  const [allFacilitators, setAllFacilitators] = useState<FacilitatorInfo[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isEditingModalOpen, setIsEditingModalOpen] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
@@ -162,6 +163,11 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
       if (res?.facilitator) {
         setGlobalFacilitator(res.facilitator);
       }
+      if (Array.isArray(res?.facilitators) && res.facilitators.length > 0) {
+        setAllFacilitators(res.facilitators);
+      } else if (res?.facilitator) {
+        setAllFacilitators([res.facilitator]);
+      }
     } catch (err) {
       console.warn('Could not load global settings in events manager:', err);
     }
@@ -174,6 +180,11 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     const handleSettingsUpdated = (e: any) => {
       if (e?.detail?.facilitator) {
         setGlobalFacilitator(e.detail.facilitator);
+      }
+      if (Array.isArray(e?.detail?.facilitators) && e.detail.facilitators.length > 0) {
+        setAllFacilitators(e.detail.facilitators);
+      } else if (e?.detail?.facilitator) {
+        setAllFacilitators([e.detail.facilitator]);
       }
     };
 
@@ -289,18 +300,20 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     setNewBenefitInput('');
     setNewPrepTipInput('');
 
+    const defaultFacilitatorProfile = allFacilitators[0] || globalFacilitator;
     const defaultFacilitator: Facilitator = {
-      name: globalFacilitator?.nameTh || globalFacilitator?.nameEn || 'Kru Beever (Supapit)',
-      role: globalFacilitator?.titleTh || globalFacilitator?.titleEn || 'Founder & Lead Somatic Alchemist',
-      bio: globalFacilitator?.bioShortTh || globalFacilitator?.bioLongTh || 'Certified Sound Healing Practitioner and Holistic Facial Ritualist.',
-      avatarUrl: globalFacilitator?.photoUrl || '',
-      certifications: globalFacilitator?.certifications || []
+      name: defaultFacilitatorProfile?.nameTh || defaultFacilitatorProfile?.nameEn || 'Kru Beever (Supapit)',
+      role: defaultFacilitatorProfile?.titleTh || defaultFacilitatorProfile?.titleEn || 'Founder & Lead Somatic Alchemist',
+      bio: defaultFacilitatorProfile?.bioShortTh || defaultFacilitatorProfile?.bioLongTh || 'Certified Sound Healing Practitioner and Holistic Facial Ritualist.',
+      avatarUrl: defaultFacilitatorProfile?.photoUrl || '',
+      certifications: defaultFacilitatorProfile?.certifications || []
     };
 
     const targetMonthStr = String(currentMonth + 1).padStart(2, '0');
     setFormData({
       ...DEFAULT_EVENT_FORM,
       useGlobalFacilitator: true,
+      facilitatorId: defaultFacilitatorProfile?.id,
       facilitator: defaultFacilitator,
       sensoryNotes: ['Tibetan Singing Bowls', 'Organic Herbal Tea', 'Essential Oil Mist'],
       benefits: ['คืนสมดุลให้ร่างกายและจิตใจ', 'ผ่อนคลายกล้ามเนื้อและระบบประสาท', 'คลายความตึงเครียดสะสม'],
@@ -568,6 +581,7 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
       endTime: formData.endTime || '10:30 AM',
       durationMinutes: Number(formData.durationMinutes) || 90,
       useGlobalFacilitator: formData.useGlobalFacilitator !== false,
+      facilitatorId: formData.useGlobalFacilitator !== false ? formData.facilitatorId : undefined,
       facilitator: {
         name: formData.facilitator?.name?.trim() || (globalFacilitator?.nameTh || 'Kru Beever (Supapit)'),
         role: formData.facilitator?.role?.trim() || (globalFacilitator?.titleTh || 'Founder & Lead Somatic Alchemist'),
@@ -781,13 +795,15 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
 
                         {/* Branch Tag */}
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                          evt.branch === 'Ratchathewi' 
+                          evt.branch === 'Online'
+                            ? 'bg-[#E9E0F5] text-[#5D4488] border border-[#8A6FAE]/40'
+                            : evt.branch === 'Ratchathewi' 
                             ? 'bg-[#FCE3EB] text-[#A82B5A]' 
                             : evt.branch === 'On-Tour'
                             ? 'bg-[#9E674F] text-white'
                             : 'bg-[#EDE7E1] text-[#555]'
                         }`}>
-                          {evt.branch === 'Ratchathewi' ? 'ราชเทวี' : evt.branch === 'On-Tour' ? 'ออนทัวร์' : 'นครสวรรค์'}
+                          {evt.branch === 'Online' ? 'ออนไลน์' : evt.branch === 'Ratchathewi' ? 'ราชเทวี' : evt.branch === 'On-Tour' ? 'ออนทัวร์' : 'นครสวรรค์'}
                         </span>
 
                         {/* Fully Booked Status Badge */}
@@ -830,6 +846,14 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
                           <span className="font-mono text-[#1E1E1E] font-semibold">
                             ฿{evt.priceThb.toLocaleString()}
                           </span>
+                        )}
+                        {evt.facilitator?.name && (
+                          <>
+                            <span>•</span>
+                            <span className="text-[#555] font-medium flex items-center gap-1">
+                              👤 {evt.facilitator.name}
+                            </span>
+                          </>
                         )}
                         <span>•</span>
                         
@@ -1028,6 +1052,7 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
                       <option value="Ratchathewi">สาขาราชเทวี (Ratchathewi)</option>
                       <option value="Nakhonsawan">สาขานครสวรรค์ (Nakhonsawan)</option>
                       <option value="On-Tour">ออนทัวร์ (On-Tour)</option>
+                      <option value="Online">ออนไลน์ (Online)</option>
                     </select>
                   </div>
 
@@ -1308,66 +1333,88 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
 
               {/* Row 9: Facilitator Sync & Custom Profile */}
               <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#EFE8E1] space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <UserCheck className="w-4 h-4 text-[#E84D84]" />
-                    <span className="font-bold text-xs text-[#1E1E1E]">ข้อมูลครูผู้สอน / ผู้บำบัด (Facilitator)</span>
+                    <span className="font-bold text-xs text-[#1E1E1E]">ผู้สอน / ผู้บำบัดประจำอีเวนท์ (Facilitator)</span>
                   </div>
-                  <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-[#E84D84]">
-                    <input
-                      type="checkbox"
-                      checked={formData.useGlobalFacilitator !== false}
+
+                  {/* Mode Selector (Registered Teacher vs Custom) */}
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={formData.useGlobalFacilitator !== false ? (formData.facilitatorId || allFacilitators[0]?.id || 'global') : 'custom'}
                       onChange={(e) => {
-                        const checked = e.target.checked;
-                        setFormData(prev => ({
-                          ...prev,
-                          useGlobalFacilitator: checked,
-                          facilitator: checked ? {
-                            name: globalFacilitator?.nameTh || globalFacilitator?.nameEn || 'Kru Beever (Supapit)',
-                            role: globalFacilitator?.titleTh || globalFacilitator?.titleEn || 'Founder & Lead Somatic Alchemist',
-                            bio: globalFacilitator?.bioShortTh || globalFacilitator?.bioLongTh || 'Certified Sound Healing Practitioner and Holistic Facial Ritualist.',
-                            avatarUrl: globalFacilitator?.photoUrl || '',
-                            certifications: globalFacilitator?.certifications || []
-                          } : prev.facilitator
-                        }));
+                        const val = e.target.value;
+                        if (val === 'custom') {
+                          setFormData(prev => ({
+                            ...prev,
+                            useGlobalFacilitator: false,
+                            facilitatorId: undefined
+                          }));
+                        } else {
+                          const selectedFac = allFacilitators.find(f => f.id === val) || globalFacilitator;
+                          setFormData(prev => ({
+                            ...prev,
+                            useGlobalFacilitator: true,
+                            facilitatorId: selectedFac?.id || val,
+                            facilitator: selectedFac ? {
+                              name: selectedFac.nameTh || selectedFac.nameEn || 'Kru Beever (Supapit)',
+                              role: selectedFac.titleTh || selectedFac.titleEn || 'Lead Facilitator',
+                              bio: selectedFac.bioShortTh || selectedFac.bioLongTh || '',
+                              avatarUrl: selectedFac.photoUrl || '',
+                              certifications: selectedFac.certifications || []
+                            } : prev.facilitator
+                          }));
+                        }
                       }}
-                      className="w-3.5 h-3.5 accent-[#E84D84] rounded"
-                    />
-                    <span>ซิงค์อัตโนมัติกับโปรไฟล์ครูในระบบ</span>
-                  </label>
+                      className="px-2.5 py-1.5 bg-white rounded-xl border border-[#E5DFD7] text-xs font-semibold text-[#1E1E1E] focus:outline-none focus:border-[#E84D84]"
+                    >
+                      {allFacilitators.map((fac) => (
+                        <option key={fac.id} value={fac.id}>
+                          👤 {fac.nameTh || fac.nameEn} ({fac.titleTh || fac.titleEn || 'ครูผู้สอน'})
+                        </option>
+                      ))}
+                      <option value="custom">✏️ กำหนดเอง / วิทยากรรับเชิญ (Custom / Guest)</option>
+                    </select>
+                  </div>
                 </div>
 
                 {formData.useGlobalFacilitator !== false ? (
-                  /* Global Facilitator Info Preview Card */
-                  <div className="p-3 bg-white rounded-xl border border-[#E8DFD8] flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#FAF0F3] border border-[#F8DDE5] text-[#E84D84] flex items-center justify-center font-bold text-xs flex-shrink-0 overflow-hidden">
-                      {globalFacilitator?.photoUrl ? (
-                        <img 
-                          src={globalFacilitator.photoUrl} 
-                          alt="Facilitator" 
-                          className="w-full h-full object-cover" 
-                        />
-                      ) : (
-                        <span>KB</span>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <h5 className="font-bold text-xs text-[#1E1E1E] truncate">
-                          {globalFacilitator?.nameTh || globalFacilitator?.nameEn || 'Kru Beever (Supapit)'}
-                        </h5>
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold whitespace-nowrap">
-                          ✓ ซิงค์กับระบบ
-                        </span>
+                  /* Selected Facilitator Info Preview Card */
+                  (() => {
+                    const currentFac = allFacilitators.find(f => f.id === formData.facilitatorId) || allFacilitators[0] || globalFacilitator;
+                    return (
+                      <div className="p-3 bg-white rounded-xl border border-[#E8DFD8] flex items-start gap-3">
+                        <div className="w-11 h-11 rounded-full bg-[#FAF0F3] border border-[#F8DDE5] text-[#E84D84] flex items-center justify-center font-bold text-xs flex-shrink-0 overflow-hidden">
+                          {currentFac?.photoUrl ? (
+                            <img 
+                              src={currentFac.photoUrl} 
+                              alt={currentFac.nameTh} 
+                              className="w-full h-full object-cover" 
+                            />
+                          ) : (
+                            <span>{currentFac?.nameTh ? currentFac.nameTh.slice(0, 2) : 'KB'}</span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <h5 className="font-bold text-xs text-[#1E1E1E] truncate">
+                              {currentFac?.nameTh || currentFac?.nameEn || 'Kru Beever (Supapit)'}
+                            </h5>
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold whitespace-nowrap">
+                              ✓ บันทึกในระบบ
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[#E84D84] font-medium truncate">
+                            {currentFac?.titleTh || currentFac?.titleEn || 'Lead Facilitator'}
+                          </p>
+                          <p className="text-[10px] text-[#777] line-clamp-2 mt-0.5">
+                            {currentFac?.bioShortTh || currentFac?.bioLongTh || currentFac?.bioShortEn || 'Certified Sound Healing Practitioner and Holistic Facial Ritualist.'}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-[11px] text-[#E84D84] font-medium truncate">
-                        {globalFacilitator?.titleTh || globalFacilitator?.titleEn || 'Founder & Lead Somatic Alchemist'}
-                      </p>
-                      <p className="text-[10px] text-[#777] line-clamp-2 mt-0.5">
-                        {globalFacilitator?.bioShortTh || globalFacilitator?.bioLongTh || 'Certified Sound Healing Practitioner and Holistic Facial Ritualist.'}
-                      </p>
-                    </div>
-                  </div>
+                    );
+                  })()
                 ) : (
                   /* Custom Facilitator Override Inputs */
                   <div className="space-y-2.5 pt-1">
