@@ -353,7 +353,7 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
               {/* Fully Booked Always-Circular Ring Overlay */}
               {day.hasFullyBooked && (
                 <div 
-                  className="absolute inset-0 rounded-full ring-2 ring-[#D92D4B] ring-offset-1 pointer-events-none z-[15]"
+                  className="absolute inset-[3px] rounded-full ring-2 ring-[#D92D4B] pointer-events-none z-[15]"
                   title={lang === 'th' ? 'เต็มแล้ว' : 'Fully Booked'}
                 />
               )}

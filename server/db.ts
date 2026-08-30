@@ -294,6 +294,22 @@ export async function initDatabase(): Promise<Database> {
     db.run("CREATE INDEX IF NOT EXISTS idx_month_bars_ym ON month_bars(year, month)");
   } catch {}
 
+  // Safe migration: repair existing Fully Booked labels to short text and clean sub-text
+  try {
+    db.run(`
+      UPDATE month_bars 
+      SET 
+        specialStatusLabelTh = 'เต็มแล้ว',
+        specialStatusLabelEn = 'Fully Booked',
+        specialStatusSubTh = NULL,
+        specialStatusSubEn = NULL
+      WHERE specialStatusType = 'fully_booked'
+    `);
+    console.log('[DB Migration] Repaired existing Fully Booked labels to short text.');
+  } catch (err) {
+    console.error('[DB Migration] Failed to repair Fully Booked labels:', err);
+  }
+
   // Contact Info
   db.run(`
     CREATE TABLE IF NOT EXISTS contact_info (

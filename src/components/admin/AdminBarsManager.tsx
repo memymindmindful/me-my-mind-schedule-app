@@ -164,7 +164,7 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
           dayNum: d,
           specialStatus: {
             type: 'fully_booked',
-            labelTh: 'คิวเต็มทั้งวัน',
+            labelTh: 'เต็มแล้ว',
             labelEn: 'Fully Booked',
             subTh: '',
             subEn: '',
@@ -548,7 +548,7 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
                       handleUpdateDayConfig({
                         specialStatus: {
                           type: 'fully_booked',
-                          labelTh: 'คิวเต็มทั้งวัน',
+                          labelTh: 'เต็มแล้ว',
                           labelEn: 'Fully Booked',
                           subTh: '',
                           subEn: '',
