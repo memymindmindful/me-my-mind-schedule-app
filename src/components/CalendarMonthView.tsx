@@ -341,10 +341,15 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
               onClick={() => handleDayClick(day)}
               className={`relative h-10 flex items-center justify-center cursor-pointer transition-all duration-150 group ${pillClass} ${
                 isBranchFilteredOut ? 'opacity-30' : 'opacity-100'
-              } ${
-                day.hasFullyBooked ? `ring-2 ring-[#D92D4B] ring-offset-1 ${!pillClass ? 'rounded-full' : ''}` : ''
               } ${isSelected ? `ring-2 ring-[#E84D84] ring-offset-1 z-20 font-bold shadow-xs ${!pillClass ? 'rounded-full' : ''}` : ''}`}
             >
+              {/* Fully Booked Always-Circular Ring Overlay */}
+              {day.hasFullyBooked && (
+                <div 
+                  className="absolute inset-0 rounded-full ring-2 ring-[#D92D4B] ring-offset-1 pointer-events-none z-[15]"
+                  title={lang === 'th' ? 'เต็มแล้ว' : 'Fully Booked'}
+                />
+              )}
               {/* Special Today Circle Indicator */}
               {isToday && (
                 <>
