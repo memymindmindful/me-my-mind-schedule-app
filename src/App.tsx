@@ -250,7 +250,7 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 2500);
   };
 
-  // Filtered events based on search query, branch filter, and selected date
+  // Filtered events based on search query and branch filter
   const filteredEvents = useMemo(() => {
     return events.filter((evt) => {
       // 1. Branch match
@@ -271,14 +271,9 @@ export default function App() {
         }
       }
 
-      // 3. Selected single date match (if user clicked specific date)
-      if (selectedDateStr) {
-        return evt.dateStr === selectedDateStr;
-      }
-
       return true;
     });
-  }, [events, selectedBranch, searchQuery, selectedDateStr]);
+  }, [events, selectedBranch, searchQuery]);
 
   // Handle branch pill toggle
   const handleToggleBranchFilter = (branch: BranchLocation) => {
@@ -293,13 +288,14 @@ export default function App() {
 
   // Handle date selection
   const handleSelectDate = (dateStr: string, events: ScheduleEvent[]) => {
-    if (selectedDateStr === dateStr && (!events || events.length === 0)) {
-      setSelectedDateStr(null);
-    } else {
-      setSelectedDateStr(dateStr);
+    // If the day has no events, do nothing — don't touch selectedDateStr at all,
+    // since there's no modal that will ever open to reset it later.
+    if (!events || events.length === 0) {
+      return;
     }
 
-    if (!events || events.length === 0) return;
+    // Set selected date for visual ring highlight on the calendar while modal is active
+    setSelectedDateStr(dateStr);
 
     if (events.length === 1) {
       // Exactly one event — open its detail directly

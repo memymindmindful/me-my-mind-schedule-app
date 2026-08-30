@@ -164,10 +164,10 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
           dayNum: d,
           specialStatus: {
             type: 'fully_booked',
-            labelTh: 'เต็มแล้ว (คิวเต็มทั้งวัน)',
-            labelEn: 'Fully Booked (All Day)',
-            subTh: 'รวมบริการอื่น ๆ ที่ไม่ได้ลงเป็นอีเวนท์ เช่น Private เหมารอบ',
-            subEn: 'Includes untracked private bookings for the day',
+            labelTh: 'คิวเต็มทั้งวัน',
+            labelEn: 'Fully Booked',
+            subTh: '',
+            subEn: '',
             badgeBg: '#FFE5E8',
             badgeText: '#D92D4B'
           }
@@ -548,10 +548,10 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
                       handleUpdateDayConfig({
                         specialStatus: {
                           type: 'fully_booked',
-                          labelTh: 'เต็มแล้ว (คิวเต็มทั้งวัน)',
-                          labelEn: 'Fully Booked (All Day)',
-                          subTh: 'รวมบริการอื่น ๆ ที่ไม่ได้ลงเป็นอีเวนท์ เช่น Private เหมารอบ',
-                          subEn: 'Includes untracked private bookings for the day',
+                          labelTh: 'คิวเต็มทั้งวัน',
+                          labelEn: 'Fully Booked',
+                          subTh: '',
+                          subEn: '',
                           badgeBg: '#FFE5E8',
                           badgeText: '#D92D4B'
                         }
