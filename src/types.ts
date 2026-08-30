@@ -73,6 +73,7 @@ export interface DayCalendarInfo {
   hasEvent: boolean;
   hasSpecialStar: boolean;
   hasOnlineEvent?: boolean;
+  hasFullyBooked?: boolean;
   isPinkPill?: boolean;
   isBrownPill?: boolean;
   isSundayPink?: boolean;

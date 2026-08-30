@@ -723,7 +723,7 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
             เปิดรับ: {events.filter(e => e.status !== 'fully_booked' && e.bookedCount < e.capacity).length}
           </span>
           <span>•</span>
-          <span className="text-rose-600 font-semibold">
+          <span className="text-[#D92D4B] font-semibold">
             Fully Booked: {events.filter(e => e.status === 'fully_booked' || e.bookedCount >= e.capacity).length}
           </span>
         </div>
@@ -817,8 +817,8 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
 
                         {/* Fully Booked Status Badge */}
                         {isFull ? (
-                          <span className="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200 text-[10px] font-bold flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-600 inline-block" />
+                          <span className="px-2.5 py-0.5 rounded-full bg-[#FFE5E8] text-[#D92D4B] border border-[#F8DDE5] text-[10px] font-bold flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#D92D4B] inline-block" />
                             <span>Fully Booked (เต็มแล้ว)</span>
                           </span>
                         ) : (
@@ -902,11 +902,11 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
                       title={isFull ? 'เปลี่ยนเป็นเปิดรับสมัคร' : 'เปลี่ยนสถานะเป็นเต็มแล้ว (Fully Booked)'}
                       className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border ${
                         isFull 
-                          ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200' 
-                          : 'bg-[#FAF7F5] hover:bg-rose-50 text-[#555] hover:text-rose-700 border-[#E5DFD7] hover:border-rose-200'
+                          ? 'bg-[#FFE5E8] hover:bg-[#FDD8DC] text-[#D92D4B] border-[#F8DDE5]' 
+                          : 'bg-[#FAF7F5] hover:bg-[#FFE5E8] text-[#555] hover:text-[#D92D4B] border-[#E5DFD7] hover:border-[#F8DDE5]'
                       }`}
                     >
-                      {isFull ? <XCircle className="w-3.5 h-3.5 text-rose-600" /> : <CheckCircle2 className="w-3.5 h-3.5 text-[#888]" />}
+                      {isFull ? <XCircle className="w-3.5 h-3.5 text-[#D92D4B]" /> : <CheckCircle2 className="w-3.5 h-3.5 text-[#888]" />}
                       <span>{isFull ? 'ปลดล็อค (ว่าง)' : 'เต็มแล้ว'}</span>
                     </button>
 

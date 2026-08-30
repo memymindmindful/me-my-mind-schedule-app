@@ -83,6 +83,7 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
       hasEvent: dayEvents.length > 0 || !!dayBar?.isPinkPill || !!dayBar?.isBrownPill,
       hasSpecialStar: !!dayBar?.hasSpecialStar || dayEvents.some(e => e.isSpecialStar),
       hasOnlineEvent: dayEvents.some(e => e.branch === 'Online'),
+      hasFullyBooked: dayEvents.some(e => e.status === 'fully_booked' || (e.capacity > 0 && e.bookedCount >= e.capacity)),
       isPinkPill: dayBar?.isPinkPill ?? (branch === 'Ratchathewi' && dayEvents.length > 0),
       isBrownPill: dayBar?.isBrownPill ?? (branch === 'On-Tour'),
       isSundayPink: isSunday,
@@ -283,6 +284,17 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
               {t.online}
             </span>
           </button>
+
+          {/* Fully Booked Indicator */}
+          <div 
+            className="flex items-center gap-2 px-2 py-0.5 rounded-full text-[#333333]"
+            title={lang === 'th' ? 'มีกิจกรรมที่เต็มแล้วในวันนี้' : 'Has fully booked event(s)'}
+          >
+            <span className="w-3.5 h-3.5 rounded-full ring-2 ring-[#D92D4B] ring-offset-1 bg-white inline-flex items-center justify-center shadow-2xs flex-shrink-0" />
+            <span className="leading-none text-[#D92D4B] font-medium">
+              {t.fullyBooked}
+            </span>
+          </div>
         </div>
 
       </div>
@@ -329,7 +341,9 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
               onClick={() => handleDayClick(day)}
               className={`relative h-10 flex items-center justify-center cursor-pointer transition-all duration-150 group ${pillClass} ${
                 isBranchFilteredOut ? 'opacity-30' : 'opacity-100'
-              } ${isSelected ? 'ring-2 ring-[#E84D84] ring-offset-1 z-20 font-bold shadow-xs' : ''}`}
+              } ${
+                day.hasFullyBooked ? `ring-2 ring-[#D92D4B] ring-offset-1 ${!pillClass ? 'rounded-full' : ''}` : ''
+              } ${isSelected ? `ring-2 ring-[#E84D84] ring-offset-1 z-20 font-bold shadow-xs ${!pillClass ? 'rounded-full' : ''}` : ''}`}
             >
               {/* Special Today Circle Indicator */}
               {isToday && (
@@ -441,8 +455,10 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
                         />
                         <span>{locName}</span>
                         {day.events.length > 0 && (
-                          <span className="bg-[#E84D84] text-white text-[9px] px-1.5 py-0.2 rounded-full font-bold">
-                            {day.events.length} {lang === 'th' ? 'คลาส' : 'event'}
+                          <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-bold ${
+                            day.hasFullyBooked ? 'bg-[#D92D4B] text-white' : 'bg-[#E84D84] text-white'
+                          }`}>
+                            {day.hasFullyBooked ? t.fullyBooked : `${day.events.length} ${lang === 'th' ? 'คลาส' : 'event'}`}
                           </span>
                         )}
                       </>
