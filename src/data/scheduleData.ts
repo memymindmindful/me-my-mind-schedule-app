@@ -436,8 +436,8 @@ export function getCalendarMapForMonth(year: number, month: number): Record<numb
         type: 'big_cleaning', 
         labelTh: 'Big Cleaning', 
         labelEn: 'Big Cleaning', 
-        subTh: 'ปิดทำความสะอาด & อบโอโซน', 
-        subEn: 'Deep Clean & Space Purification',
+        subTh: '', 
+        subEn: '',
         badgeBg: '#BAE6FD', 
         badgeText: '#0284C7' 
       };
@@ -445,9 +445,9 @@ export function getCalendarMapForMonth(year: number, month: number): Record<numb
       specialStatus = { 
         type: 'closed', 
         labelTh: 'ปิดร้าน', 
-        labelEn: 'Studio Closed', 
-        subTh: 'วันหยุดประจำสัปดาห์', 
-        subEn: 'Weekly Off-Day',
+        labelEn: 'Closed', 
+        subTh: '', 
+        subEn: '',
         badgeBg: '#222222', 
         badgeText: '#FFFFFF' 
       };

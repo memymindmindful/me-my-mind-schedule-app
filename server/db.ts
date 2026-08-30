@@ -294,7 +294,7 @@ export async function initDatabase(): Promise<Database> {
     db.run("CREATE INDEX IF NOT EXISTS idx_month_bars_ym ON month_bars(year, month)");
   } catch {}
 
-  // Safe migration: repair existing Fully Booked labels to short text and clean sub-text
+  // Safe migration: repair existing special status labels to short text and clean sub-text
   try {
     db.run(`
       UPDATE month_bars 
@@ -305,9 +305,27 @@ export async function initDatabase(): Promise<Database> {
         specialStatusSubEn = NULL
       WHERE specialStatusType = 'fully_booked'
     `);
-    console.log('[DB Migration] Repaired existing Fully Booked labels to short text.');
+    db.run(`
+      UPDATE month_bars 
+      SET 
+        specialStatusLabelTh = 'ปิดร้าน',
+        specialStatusLabelEn = 'Closed',
+        specialStatusSubTh = NULL,
+        specialStatusSubEn = NULL
+      WHERE specialStatusType = 'closed'
+    `);
+    db.run(`
+      UPDATE month_bars 
+      SET 
+        specialStatusLabelTh = 'Big Cleaning',
+        specialStatusLabelEn = 'Big Cleaning',
+        specialStatusSubTh = NULL,
+        specialStatusSubEn = NULL
+      WHERE specialStatusType = 'big_cleaning'
+    `);
+    console.log('[DB Migration] Repaired existing special status labels to short text.');
   } catch (err) {
-    console.error('[DB Migration] Failed to repair Fully Booked labels:', err);
+    console.error('[DB Migration] Failed to repair special status labels:', err);
   }
 
   // Contact Info

@@ -439,10 +439,10 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
 
               {/* Hover Pop-up Tooltip for ALL Days (Nakhonsawan default, residency pills, & special status) */}
               {hoveredDay?.dayNum === day.dayNum && (
-                <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-40 pointer-events-none animate-in fade-in zoom-in-90 duration-150 max-w-[85vw] sm:max-w-xs">
-                  <div className="px-2.5 py-1.5 rounded-2xl bg-[#1E1E1E] text-white text-[11px] font-medium shadow-xl flex flex-wrap items-center justify-center gap-1 border border-white/10 text-center">
+                <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-40 pointer-events-none animate-in fade-in zoom-in-90 duration-150 max-w-[85vw]">
+                  <div className="px-2.5 py-1 rounded-full bg-[#1E1E1E] text-white text-[11px] font-medium shadow-xl flex items-center justify-center gap-1.5 border border-white/10 whitespace-nowrap">
                     {isToday && (
-                      <span className="bg-[#E84D84] text-white text-[9px] px-1.5 py-0.2 rounded-full font-bold flex-shrink-0">
+                      <span className="bg-[#E84D84] text-white text-[9px] px-1.5 py-0.2 rounded-full font-bold flex-shrink-0 whitespace-nowrap">
                         {t.today}
                       </span>
                     )}
@@ -452,12 +452,9 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
                           className="w-2 h-2 rounded-full inline-block flex-shrink-0"
                           style={{ backgroundColor: day.specialStatus.badgeBg }}
                         />
-                        <span className="font-bold">{lang === 'th' ? day.specialStatus.labelTh : day.specialStatus.labelEn}</span>
-                        {(lang === 'th' ? day.specialStatus.subTh : day.specialStatus.subEn) && (
-                          <span className="text-stone-300 text-[10px]">
-                            • {lang === 'th' ? day.specialStatus.subTh : day.specialStatus.subEn}
-                          </span>
-                        )}
+                        <span className="font-bold whitespace-nowrap flex-shrink-0">
+                          {lang === 'th' ? day.specialStatus.labelTh : day.specialStatus.labelEn}
+                        </span>
                       </>
                     ) : (
                       <>
@@ -467,9 +464,9 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
                             backgroundColor: day.branch === 'Online' ? '#8A6FAE' : day.branch === 'On-Tour' ? '#D4A373' : day.branch === 'Ratchathewi' ? '#F7C2D2' : '#FFFFFF' 
                           }}
                         />
-                        <span>{locName}</span>
+                        <span className="whitespace-nowrap flex-shrink-0">{locName}</span>
                         {day.events.length > 0 && (
-                          <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-bold flex-shrink-0 ${
+                          <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-bold flex-shrink-0 whitespace-nowrap ${
                             day.hasFullyBooked ? 'bg-[#D92D4B] text-white' : 'bg-[#E84D84] text-white'
                           }`}>
                             {day.hasFullyBooked ? t.fullyBooked : `${day.events.length} ${lang === 'th' ? 'คลาส' : 'event'}`}

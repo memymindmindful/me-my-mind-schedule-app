@@ -135,9 +135,9 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
           specialStatus: {
             type: 'closed',
             labelTh: 'ปิดร้าน',
-            labelEn: 'Studio Closed',
-            subTh: 'วันหยุดประจำสัปดาห์',
-            subEn: 'Weekly Off-Day',
+            labelEn: 'Closed',
+            subTh: '',
+            subEn: '',
             badgeBg: '#222222',
             badgeText: '#FFFFFF'
           }
@@ -152,8 +152,8 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
             type: 'big_cleaning',
             labelTh: 'Big Cleaning',
             labelEn: 'Big Cleaning',
-            subTh: 'ปิดทำความสะอาด & อบโอโซน',
-            subEn: 'Deep Clean & Space Purification',
+            subTh: '',
+            subEn: '',
             badgeBg: '#BAE6FD',
             badgeText: '#0284C7'
           }
@@ -525,9 +525,9 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
                         specialStatus: {
                           type: 'closed',
                           labelTh: 'ปิดร้าน',
-                          labelEn: 'Studio Closed',
-                          subTh: 'วันหยุดประจำสัปดาห์',
-                          subEn: 'Weekly Off-Day',
+                          labelEn: 'Closed',
+                          subTh: '',
+                          subEn: '',
                           badgeBg: '#222222',
                           badgeText: '#FFFFFF'
                         }
@@ -538,8 +538,8 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
                           type: 'big_cleaning',
                           labelTh: 'Big Cleaning',
                           labelEn: 'Big Cleaning',
-                          subTh: 'ปิดทำความสะอาด & อบโอโซน',
-                          subEn: 'Deep Clean & Space Purification',
+                          subTh: '',
+                          subEn: '',
                           badgeBg: '#BAE6FD',
                           badgeText: '#0284C7'
                         }
@@ -563,9 +563,9 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
                   className="w-full px-3 py-2 bg-[#FAF8F5] rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
                 >
                   <option value="none">เปิดให้บริการตามปกติ</option>
-                  <option value="closed">⛔ ปิดร้าน (Studio Closed)</option>
+                  <option value="closed">⛔ ปิดร้าน (Closed)</option>
                   <option value="big_cleaning">🧹 Big Cleaning & Ozone</option>
-                  <option value="fully_booked">🔴 เต็มแล้ว (Fully Booked - คิวเต็มทั้งวัน)</option>
+                  <option value="fully_booked">🔴 เต็มแล้ว (Fully Booked)</option>
                 </select>
               </div>
             </div>
