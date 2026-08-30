@@ -50,7 +50,7 @@ export interface ScheduleEvent {
   status: 'available' | 'almost_full' | 'fully_booked';
 }
 
-export type SpecialDayStatus = 'closed' | 'big_cleaning' | 'custom_note';
+export type SpecialDayStatus = 'closed' | 'big_cleaning' | 'fully_booked' | 'custom_note';
 
 export interface SpecialStatusDetails {
   type: SpecialDayStatus;

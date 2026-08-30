@@ -41,7 +41,7 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
   const [batchStartDay, setBatchStartDay] = useState<number>(1);
   const [batchEndDay, setBatchEndDay] = useState<number>(4);
   const [batchActionType, setBatchActionType] = useState<
-    'ratchathewi_pink' | 'nakhonsawan_normal' | 'ontour_brown' | 'closed' | 'big_cleaning' | 'clear'
+    'ratchathewi_pink' | 'nakhonsawan_normal' | 'ontour_brown' | 'closed' | 'big_cleaning' | 'fully_booked' | 'clear'
   >('ratchathewi_pink');
   const [batchTourCity, setBatchTourCity] = useState('เชียงใหม่');
 
@@ -158,6 +158,20 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
             badgeText: '#0284C7'
           }
         };
+      } else if (batchActionType === 'fully_booked') {
+        newMap[d] = {
+          ...newMap[d],
+          dayNum: d,
+          specialStatus: {
+            type: 'fully_booked',
+            labelTh: 'เต็มแล้ว (คิวเต็มทั้งวัน)',
+            labelEn: 'Fully Booked (All Day)',
+            subTh: 'รวมบริการอื่น ๆ ที่ไม่ได้ลงเป็นอีเวนท์ เช่น Private เหมารอบ',
+            subEn: 'Includes untracked private bookings for the day',
+            badgeBg: '#FFE5E8',
+            badgeText: '#D92D4B'
+          }
+        };
       } else if (batchActionType === 'nakhonsawan_normal') {
         newMap[d] = {
           dayNum: d,
@@ -263,6 +277,17 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
               } else if (cfg?.specialStatus?.type === 'big_cleaning') {
                 badgeBg = 'bg-[#BAE6FD] text-[#0369A1] border-[#7DD3FC]';
                 badgeLabel = 'Big Clean';
+              } else if (cfg?.specialStatus?.type === 'fully_booked') {
+                if (cfg?.isBrownPill || cfg?.branch === 'On-Tour') {
+                  badgeBg = 'bg-[#9E674F] text-white border-[#8B5640] ring-2 ring-[#D92D4B] ring-offset-1';
+                  badgeLabel = 'เต็ม (ทัวร์)';
+                } else if (cfg?.isPinkPill || cfg?.branch === 'Ratchathewi') {
+                  badgeBg = 'bg-[#FCE3EB] text-[#2B2B2B] border-[#F8C8D7] ring-2 ring-[#D92D4B] ring-offset-1';
+                  badgeLabel = 'เต็ม (ราชเทวี)';
+                } else {
+                  badgeBg = 'bg-[#FFE5E8] text-[#D92D4B] border-[#F8DDE5] ring-2 ring-[#D92D4B] ring-offset-1';
+                  badgeLabel = 'เต็มแล้ว';
+                }
               } else if (cfg?.isBrownPill || cfg?.branch === 'On-Tour') {
                 badgeBg = 'bg-[#9E674F] text-white border-[#8B5640]';
                 badgeLabel = cfg?.tourCity ? `ทัวร์ ${cfg.tourCity}` : 'ออนทัวร์';
@@ -320,6 +345,10 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
               <span className="w-3 h-3 rounded-full bg-[#BAE6FD] border border-[#7DD3FC] inline-block" />
               <span>Big Cleaning</span>
             </span>
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 rounded-full bg-white ring-2 ring-[#D92D4B] ring-offset-1 inline-block" />
+              <span className="text-[#D92D4B] font-medium">Fully Booked (คิวเต็ม)</span>
+            </span>
           </div>
         </div>
 
@@ -372,6 +401,7 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
                   <option value="ontour_brown">🍂 แถบสีน้ำตาล: ออนทัวร์ต่างจังหวัด (On-Tour)</option>
                   <option value="closed">⛔ วันปิดร้าน (Closed / Weekly Off-day)</option>
                   <option value="big_cleaning">🧹 วันทำความสะอาด (Big Cleaning & Ozone)</option>
+                  <option value="fully_booked">🔴 วันที่คิวเต็มทั้งวัน (Fully Booked - Manual)</option>
                   <option value="nakhonsawan_normal">🏠 สาขานครสวรรค์ (สีขาวปกติ)</option>
                   <option value="clear">🗑️ ล้างสถานะ / รีเซ็ตเป็นวันปกติ</option>
                 </select>
@@ -514,6 +544,18 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
                           badgeText: '#0284C7'
                         }
                       });
+                    } else if (val === 'fully_booked') {
+                      handleUpdateDayConfig({
+                        specialStatus: {
+                          type: 'fully_booked',
+                          labelTh: 'เต็มแล้ว (คิวเต็มทั้งวัน)',
+                          labelEn: 'Fully Booked (All Day)',
+                          subTh: 'รวมบริการอื่น ๆ ที่ไม่ได้ลงเป็นอีเวนท์ เช่น Private เหมารอบ',
+                          subEn: 'Includes untracked private bookings for the day',
+                          badgeBg: '#FFE5E8',
+                          badgeText: '#D92D4B'
+                        }
+                      });
                     } else {
                       handleUpdateDayConfig({ specialStatus: undefined });
                     }
@@ -523,6 +565,7 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
                   <option value="none">เปิดให้บริการตามปกติ</option>
                   <option value="closed">⛔ ปิดร้าน (Studio Closed)</option>
                   <option value="big_cleaning">🧹 Big Cleaning & Ozone</option>
+                  <option value="fully_booked">🔴 เต็มแล้ว (Fully Booked - คิวเต็มทั้งวัน)</option>
                 </select>
               </div>
             </div>

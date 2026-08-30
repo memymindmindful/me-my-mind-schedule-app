@@ -72,6 +72,13 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
     // Default branch is Nakhonsawan unless specified otherwise
     const branch: BranchLocation = dayBar?.branch || dayEvents[0]?.branch || 'Nakhonsawan';
 
+    // Fully booked condition: manual day override OR (has events and all events are full)
+    const dayBarFullyBooked = dayBar?.specialStatus?.type === 'fully_booked';
+    const allEventsFullyBooked = dayEvents.length > 0 && dayEvents.every(
+      e => e.status === 'fully_booked' || (e.capacity > 0 && e.bookedCount >= e.capacity)
+    );
+    const isDayFullyBooked = dayBarFullyBooked || allEventsFullyBooked;
+
     calendarDays.push({
       dayNum: d,
       dateStr,
@@ -83,7 +90,7 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
       hasEvent: dayEvents.length > 0 || !!dayBar?.isPinkPill || !!dayBar?.isBrownPill,
       hasSpecialStar: !!dayBar?.hasSpecialStar || dayEvents.some(e => e.isSpecialStar),
       hasOnlineEvent: dayEvents.some(e => e.branch === 'Online'),
-      hasFullyBooked: dayEvents.some(e => e.status === 'fully_booked' || (e.capacity > 0 && e.bookedCount >= e.capacity)),
+      hasFullyBooked: isDayFullyBooked,
       isPinkPill: dayBar?.isPinkPill ?? (branch === 'Ratchathewi' && dayEvents.length > 0),
       isBrownPill: dayBar?.isBrownPill ?? (branch === 'On-Tour'),
       isSundayPink: isSunday,
