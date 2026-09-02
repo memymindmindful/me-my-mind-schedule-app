@@ -175,6 +175,18 @@ export async function initDatabase(): Promise<Database> {
       taglineEn TEXT,
       sayHiMessageTh TEXT,
       sayHiMessageEn TEXT,
+      welcomeGuideIntroTh TEXT,
+      welcomeGuideIntroEn TEXT,
+      welcomeGuideItem1Th TEXT,
+      welcomeGuideItem1En TEXT,
+      welcomeGuideItem2Th TEXT,
+      welcomeGuideItem2En TEXT,
+      welcomeGuideItem3Th TEXT,
+      welcomeGuideItem3En TEXT,
+      welcomeGuideItem4Th TEXT,
+      welcomeGuideItem4En TEXT,
+      welcomeGuideOutroTh TEXT,
+      welcomeGuideOutroEn TEXT,
       logoUrl TEXT,
       defaultLanguage TEXT DEFAULT 'th',
       currency TEXT DEFAULT 'THB',
@@ -190,6 +202,51 @@ export async function initDatabase(): Promise<Database> {
   try {
     db.run("ALTER TABLE studio_info ADD COLUMN sayHiMessageEn TEXT");
   } catch {}
+
+  const guideFields = [
+    'welcomeGuideIntroTh', 'welcomeGuideIntroEn',
+    'welcomeGuideItem1Th', 'welcomeGuideItem1En',
+    'welcomeGuideItem2Th', 'welcomeGuideItem2En',
+    'welcomeGuideItem3Th', 'welcomeGuideItem3En',
+    'welcomeGuideItem4Th', 'welcomeGuideItem4En',
+    'welcomeGuideOutroTh', 'welcomeGuideOutroEn'
+  ];
+  for (const field of guideFields) {
+    try {
+      db.run(`ALTER TABLE studio_info ADD COLUMN ${field} TEXT`);
+    } catch {}
+  }
+
+  // Seed default Welcome Guide content only where empty
+  try {
+    db.run(`UPDATE studio_info SET welcomeGuideIntroTh = ? WHERE welcomeGuideIntroTh IS NULL OR welcomeGuideIntroTh = ''`,
+      ['Me.My.Mind Mindfulness Studio ยินดีให้บริการค่ะ\n\nสามารถใช้ปฏิทินนี้เพื่อเช็คดูเบื้องต้นว่า ในวันที่คุณต้องการจอง:']);
+    db.run(`UPDATE studio_info SET welcomeGuideIntroEn = ? WHERE welcomeGuideIntroEn IS NULL OR welcomeGuideIntroEn = ''`,
+      ["Welcome to Me.My.Mind Mindfulness Studio!\n\nYou can use this calendar to check, for the date you'd like to book:"]);
+    db.run(`UPDATE studio_info SET welcomeGuideItem1Th = ? WHERE welcomeGuideItem1Th IS NULL OR welcomeGuideItem1Th = ''`,
+      ['ครูบีอยู่จังหวัดไหน?']);
+    db.run(`UPDATE studio_info SET welcomeGuideItem1En = ? WHERE welcomeGuideItem1En IS NULL OR welcomeGuideItem1En = ''`,
+      ['Which branch/location Kru Bee is at']);
+    db.run(`UPDATE studio_info SET welcomeGuideItem2Th = ? WHERE welcomeGuideItem2Th IS NULL OR welcomeGuideItem2Th = ''`,
+      ['เปิดหรือปิดร้าน?']);
+    db.run(`UPDATE studio_info SET welcomeGuideItem2En = ? WHERE welcomeGuideItem2En IS NULL OR welcomeGuideItem2En = ''`,
+      ['Whether the studio is open or closed']);
+    db.run(`UPDATE studio_info SET welcomeGuideItem3Th = ? WHERE welcomeGuideItem3Th IS NULL OR welcomeGuideItem3Th = ''`,
+      ['มีกิจกรรมแบบกลุ่มให้เข้าร่วมไหม ออนไลน์ หรือ ออนไซต์?']);
+    db.run(`UPDATE studio_info SET welcomeGuideItem3En = ? WHERE welcomeGuideItem3En IS NULL OR welcomeGuideItem3En = ''`,
+      ["Whether there's a group activity to join — online or on-site"]);
+    db.run(`UPDATE studio_info SET welcomeGuideItem4Th = ? WHERE welcomeGuideItem4Th IS NULL OR welcomeGuideItem4Th = ''`,
+      ['คิววันนั้นเต็มหรือยัง?']);
+    db.run(`UPDATE studio_info SET welcomeGuideItem4En = ? WHERE welcomeGuideItem4En IS NULL OR welcomeGuideItem4En = ''`,
+      ["Whether that day's queue is already full"]);
+    db.run(`UPDATE studio_info SET welcomeGuideOutroTh = ? WHERE welcomeGuideOutroTh IS NULL OR welcomeGuideOutroTh = ''`,
+      ['ปฏิทินนี้ใช้ดูกิจกรรมกลุ่มเป็นหลักค่ะ บีไม่ได้อัพเดททุกการจองเคส Private ไว้ในนี้ เพื่อให้ดูสบายตา\n\nสำหรับลูกค้า Private เมื่อพอทราบวันที่อยู่สาขานั้นคร่าว ๆ แล้ว ทักแชทมาสอบถามคิวได้อีกทีใน Line นะคะ\n\nรักและเคารพ\nครูบีเว่อร์']);
+    db.run(`UPDATE studio_info SET welcomeGuideOutroEn = ? WHERE welcomeGuideOutroEn IS NULL OR welcomeGuideOutroEn = ''`,
+      ["This calendar mainly shows group activities. Bee doesn't list every Private booking here, to keep it easy to read.\n\nFor Private bookings — once you have a rough idea of the date/branch, please message us on LINE to check availability.\n\nWith love and respect,\nKru Beever"]);
+    console.log('[DB Migration] Seeded default Welcome Guide fields.');
+  } catch (err) {
+    console.error('[DB Migration] Failed to seed Welcome Guide fields:', err);
+  }
 
   // Facilitator Profile & Certifications
   db.run(`

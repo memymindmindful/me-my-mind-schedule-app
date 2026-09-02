@@ -9,9 +9,12 @@ import { EventDetailModal } from './components/EventDetailModal';
 import { DayEventsListModal } from './components/DayEventsListModal';
 import { BookingInstructionsModal } from './components/BookingInstructionsModal';
 import { OptionsMenuModal } from './components/OptionsMenuModal';
+import { WelcomeGuideModal } from './components/WelcomeGuideModal';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { Language, TRANSLATIONS } from './utils/translations';
 import { CheckCircle } from 'lucide-react';
+
+const WELCOME_GUIDE_SEEN_KEY = 'mmm_welcome_guide_seen_v1';
 
 export default function App() {
   // Check URL query param ?view=admin or #admin
@@ -88,6 +91,28 @@ export default function App() {
 
   // Options & Studio guide modal
   const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState<boolean>(false);
+
+  // Welcome / Calendar Guide Modal state
+  const [showWelcomeGuide, setShowWelcomeGuide] = useState<boolean>(false);
+
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem(WELCOME_GUIDE_SEEN_KEY)) {
+        setShowWelcomeGuide(true);
+      }
+    } catch (err) {
+      console.warn('localStorage read error:', err);
+    }
+  }, []);
+
+  const handleCloseWelcomeGuide = () => {
+    setShowWelcomeGuide(false);
+    try {
+      localStorage.setItem(WELCOME_GUIDE_SEEN_KEY, 'true');
+    } catch (err) {
+      console.warn('localStorage write error:', err);
+    }
+  };
 
   // Toast feedback state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -359,6 +384,7 @@ export default function App() {
               <CalendarHeader
                 onBack={handleBackToLine}
                 onOptionsClick={() => setIsOptionsMenuOpen(true)}
+                onOpenWelcomeGuide={() => setShowWelcomeGuide(true)}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 lang={lang}
@@ -456,6 +482,14 @@ export default function App() {
         settings={studioSettings}
         lang={lang}
         onToggleLang={handleToggleLang}
+      />
+
+      {/* Welcome & Calendar Guide Modal */}
+      <WelcomeGuideModal
+        isOpen={showWelcomeGuide}
+        onClose={handleCloseWelcomeGuide}
+        lang={lang}
+        guide={studioSettings?.studio || {}}
       />
     </div>
   );

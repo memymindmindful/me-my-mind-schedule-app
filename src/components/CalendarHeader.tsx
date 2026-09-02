@@ -1,10 +1,11 @@
 import React from 'react';
-import { ChevronLeft, MoreHorizontal, Search, X, Globe, RefreshCw } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Search, X, Globe, RefreshCw, Calendar } from 'lucide-react';
 import { Language, TRANSLATIONS } from '../utils/translations';
 
 interface CalendarHeaderProps {
   onBack: () => void;
   onOptionsClick: () => void;
+  onOpenWelcomeGuide: () => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   lang: Language;
@@ -16,6 +17,7 @@ interface CalendarHeaderProps {
 export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   onBack,
   onOptionsClick,
+  onOpenWelcomeGuide,
   searchQuery,
   onSearchChange,
   lang,
@@ -27,7 +29,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 
   return (
     <div className="w-full space-y-3 select-none">
-      {/* Top Bar: Back, Title, Refresh, Language Toggle, Options */}
+      {/* Top Bar: Back, Title, Guide, Refresh, Language Toggle, Options */}
       <div className="flex items-center justify-between pt-1">
         {/* Back Button (<) */}
         <button
@@ -45,8 +47,19 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           {t.appTitle}
         </h1>
 
-        {/* Right Controls: Refresh Button, Language Switcher & Options Button */}
+        {/* Right Controls: Welcome Guide, Refresh Button, Language Switcher & Options Button */}
         <div className="flex items-center gap-1.5">
+          {/* Calendar Guide Icon Button */}
+          <button
+            id="header-guide-btn"
+            onClick={onOpenWelcomeGuide}
+            className="p-1.5 text-[#E84D84] hover:bg-[#E84D84]/10 rounded-full transition-colors cursor-pointer"
+            title={lang === 'th' ? 'วิธีใช้ปฏิทิน' : 'How to use this calendar'}
+            aria-label="Calendar Guide"
+          >
+            <Calendar className="w-4 h-4 stroke-[2.5]" />
+          </button>
+
           {/* Refresh Button */}
           <button
             id="header-refresh-btn"

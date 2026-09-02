@@ -121,6 +121,18 @@ export interface StudioInfo {
   taglineEn: string;
   sayHiMessageTh?: string;
   sayHiMessageEn?: string;
+  welcomeGuideIntroTh?: string;
+  welcomeGuideIntroEn?: string;
+  welcomeGuideItem1Th?: string;
+  welcomeGuideItem1En?: string;
+  welcomeGuideItem2Th?: string;
+  welcomeGuideItem2En?: string;
+  welcomeGuideItem3Th?: string;
+  welcomeGuideItem3En?: string;
+  welcomeGuideItem4Th?: string;
+  welcomeGuideItem4En?: string;
+  welcomeGuideOutroTh?: string;
+  welcomeGuideOutroEn?: string;
   logoUrl?: string;
   defaultLanguage: 'th' | 'en';
   currency: string;
