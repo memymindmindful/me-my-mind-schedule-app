@@ -175,6 +175,8 @@ export async function initDatabase(): Promise<Database> {
       taglineEn TEXT,
       sayHiMessageTh TEXT,
       sayHiMessageEn TEXT,
+      welcomeGuideMessageTh TEXT,
+      welcomeGuideMessageEn TEXT,
       welcomeGuideIntroTh TEXT,
       welcomeGuideIntroEn TEXT,
       welcomeGuideItem1Th TEXT,
@@ -202,50 +204,86 @@ export async function initDatabase(): Promise<Database> {
   try {
     db.run("ALTER TABLE studio_info ADD COLUMN sayHiMessageEn TEXT");
   } catch {}
-
-  const guideFields = [
-    'welcomeGuideIntroTh', 'welcomeGuideIntroEn',
-    'welcomeGuideItem1Th', 'welcomeGuideItem1En',
-    'welcomeGuideItem2Th', 'welcomeGuideItem2En',
-    'welcomeGuideItem3Th', 'welcomeGuideItem3En',
-    'welcomeGuideItem4Th', 'welcomeGuideItem4En',
-    'welcomeGuideOutroTh', 'welcomeGuideOutroEn'
-  ];
-  for (const field of guideFields) {
-    try {
-      db.run(`ALTER TABLE studio_info ADD COLUMN ${field} TEXT`);
-    } catch {}
-  }
-
-  // Seed default Welcome Guide content only where empty
   try {
-    db.run(`UPDATE studio_info SET welcomeGuideIntroTh = ? WHERE welcomeGuideIntroTh IS NULL OR welcomeGuideIntroTh = ''`,
-      ['Me.My.Mind Mindfulness Studio ยินดีให้บริการค่ะ\n\nสามารถใช้ปฏิทินนี้เพื่อเช็คดูเบื้องต้นว่า ในวันที่คุณต้องการจอง:']);
-    db.run(`UPDATE studio_info SET welcomeGuideIntroEn = ? WHERE welcomeGuideIntroEn IS NULL OR welcomeGuideIntroEn = ''`,
-      ["Welcome to Me.My.Mind Mindfulness Studio!\n\nYou can use this calendar to check, for the date you'd like to book:"]);
-    db.run(`UPDATE studio_info SET welcomeGuideItem1Th = ? WHERE welcomeGuideItem1Th IS NULL OR welcomeGuideItem1Th = ''`,
-      ['ครูบีอยู่จังหวัดไหน?']);
-    db.run(`UPDATE studio_info SET welcomeGuideItem1En = ? WHERE welcomeGuideItem1En IS NULL OR welcomeGuideItem1En = ''`,
-      ['Which branch/location Kru Bee is at']);
-    db.run(`UPDATE studio_info SET welcomeGuideItem2Th = ? WHERE welcomeGuideItem2Th IS NULL OR welcomeGuideItem2Th = ''`,
-      ['เปิดหรือปิดร้าน?']);
-    db.run(`UPDATE studio_info SET welcomeGuideItem2En = ? WHERE welcomeGuideItem2En IS NULL OR welcomeGuideItem2En = ''`,
-      ['Whether the studio is open or closed']);
-    db.run(`UPDATE studio_info SET welcomeGuideItem3Th = ? WHERE welcomeGuideItem3Th IS NULL OR welcomeGuideItem3Th = ''`,
-      ['มีกิจกรรมแบบกลุ่มให้เข้าร่วมไหม ออนไลน์ หรือ ออนไซต์?']);
-    db.run(`UPDATE studio_info SET welcomeGuideItem3En = ? WHERE welcomeGuideItem3En IS NULL OR welcomeGuideItem3En = ''`,
-      ["Whether there's a group activity to join — online or on-site"]);
-    db.run(`UPDATE studio_info SET welcomeGuideItem4Th = ? WHERE welcomeGuideItem4Th IS NULL OR welcomeGuideItem4Th = ''`,
-      ['คิววันนั้นเต็มหรือยัง?']);
-    db.run(`UPDATE studio_info SET welcomeGuideItem4En = ? WHERE welcomeGuideItem4En IS NULL OR welcomeGuideItem4En = ''`,
-      ["Whether that day's queue is already full"]);
-    db.run(`UPDATE studio_info SET welcomeGuideOutroTh = ? WHERE welcomeGuideOutroTh IS NULL OR welcomeGuideOutroTh = ''`,
-      ['ปฏิทินนี้ใช้ดูกิจกรรมกลุ่มเป็นหลักค่ะ บีไม่ได้อัพเดททุกการจองเคส Private ไว้ในนี้ เพื่อให้ดูสบายตา\n\nสำหรับลูกค้า Private เมื่อพอทราบวันที่อยู่สาขานั้นคร่าว ๆ แล้ว ทักแชทมาสอบถามคิวได้อีกทีใน Line นะคะ\n\nรักและเคารพ\nครูบีเว่อร์']);
-    db.run(`UPDATE studio_info SET welcomeGuideOutroEn = ? WHERE welcomeGuideOutroEn IS NULL OR welcomeGuideOutroEn = ''`,
-      ["This calendar mainly shows group activities. Bee doesn't list every Private booking here, to keep it easy to read.\n\nFor Private bookings — once you have a rough idea of the date/branch, please message us on LINE to check availability.\n\nWith love and respect,\nKru Beever"]);
-    console.log('[DB Migration] Seeded default Welcome Guide fields.');
+    db.run("ALTER TABLE studio_info ADD COLUMN welcomeGuideMessageTh TEXT");
+  } catch {}
+  try {
+    db.run("ALTER TABLE studio_info ADD COLUMN welcomeGuideMessageEn TEXT");
+  } catch {}
+
+  const defaultMessageTh = `Me.My.Mind Mindfulness Studio ยินดีต้อนรับค่ะ 🤍
+
+ก่อนจองคิว ลองเช็คปฏิทินนี้ดูก่อนได้เลยค่ะ ว่าในวันที่สนใจ:
+
+① ครูบีอยู่สาขาไหน
+   ⚪ ขาว = นครสวรรค์  🩷 ชมพูอ่อน = ราชเทวี  🤎 น้ำตาล = ออนทัวร์  💜 ม่วง = ออนไลน์
+
+② วันนั้นเปิดหรือปิดร้าน
+   ⚫ สีดำ = ปิดร้าน  🔵 สีฟ้า = วันทำความสะอาดใหญ่ (Big Cleaning)
+
+③ มีกิจกรรมกลุ่มแบบไหนบ้าง
+   ⭐ ดาว = กิจกรรมไฮไลท์ประจำเดือน  🎥 กล้อง = กิจกรรมออนไลน์
+
+④ คิววันนั้นเต็มหรือยัง
+   🔴 วงกลมขอบแดง = เต็มแล้วนะคะ
+
+ปฏิทินนี้โชว์แค่กิจกรรมกลุ่มเป็นหลักค่ะ ส่วนคิว Private บีไม่ได้ลงไว้ในนี้ทุกเคส เพื่อให้หน้าจอดูสบายตา ไม่รกเกินไป
+
+พอทราบคร่าว ๆ แล้วว่าวันนั้นครูบีอยู่สาขาไหน ทักแชทมาถามคิว Private เพิ่มเติมได้เลยทาง LINE นะคะ 💬
+
+รักและเคารพ
+ครูบีเว่อร์ 🤍`;
+
+  const defaultMessageEn = `Welcome to Me.My.Mind Mindfulness Studio 🤍
+
+Before you book, feel free to browse this calendar to see, for your preferred date:
+
+① Which branch Kru Bee will be at
+   ⚪ White = Nakhonsawan  🩷 Pink = Ratchathewi  🤎 Brown = On-Tour  💜 Purple = Online
+
+② Whether the studio is open or closed that day
+   ⚫ Black = Closed  🔵 Blue = Big Cleaning day
+
+③ What kind of group session is on offer
+   ⭐ Star = Monthly featured event  🎥 Camera = Online session
+
+④ Whether the day is already fully booked
+   🔴 Red-ringed circle = Fully booked
+
+This calendar focuses on group sessions — Private bookings aren't all listed here, simply to keep things clean and easy to read.
+
+Once you've narrowed down which branch and date work for you, simply message us on LINE and we'll be happy to confirm availability for your Private session. 💬
+
+With love and respect,
+Kru Beever 🤍`;
+
+  // One-time migration: concatenate old fields if welcomeGuideMessage is still empty
+  try {
+    const rows = db.exec("SELECT id, welcomeGuideIntroTh, welcomeGuideItem1Th, welcomeGuideItem2Th, welcomeGuideItem3Th, welcomeGuideItem4Th, welcomeGuideOutroTh, welcomeGuideIntroEn, welcomeGuideItem1En, welcomeGuideItem2En, welcomeGuideItem3En, welcomeGuideItem4En, welcomeGuideOutroEn, welcomeGuideMessageTh, welcomeGuideMessageEn FROM studio_info");
+    if (rows && rows.length > 0) {
+      for (const r of rows[0].values) {
+        const id = r[0] as string;
+        let msgTh = r[13] as string | null;
+        let msgEn = r[14] as string | null;
+
+        if (!msgTh || msgTh.trim() === '') {
+          const combinedTh = [r[1], r[2], r[3], r[4], r[5], r[6]].filter(Boolean).join('\n\n');
+          msgTh = combinedTh.trim() !== '' ? combinedTh : defaultMessageTh;
+        }
+        if (!msgEn || msgEn.trim() === '') {
+          const combinedEn = [r[7], r[8], r[9], r[10], r[11], r[12]].filter(Boolean).join('\n\n');
+          msgEn = combinedEn.trim() !== '' ? combinedEn : defaultMessageEn;
+        }
+
+        db.run(
+          "UPDATE studio_info SET welcomeGuideMessageTh = ?, welcomeGuideMessageEn = ? WHERE id = ?",
+          [msgTh, msgEn, id]
+        );
+      }
+      console.log('[DB Migration] Migrated welcomeGuideMessageTh/En.');
+    }
   } catch (err) {
-    console.error('[DB Migration] Failed to seed Welcome Guide fields:', err);
+    console.error('[DB Migration] Failed to migrate welcomeGuideMessage:', err);
   }
 
   // Facilitator Profile & Certifications

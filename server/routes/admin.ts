@@ -483,34 +483,19 @@ export function getAllStudioSettingsFromDb() {
     taglineEn: 'Your Daily Rituals of Self-Love',
     sayHiMessageTh: 'สวัสดีค่ะ 👋\n\nเช็คตารางครูบี เลือกวันที่ต้องการ\n แล้วทักแชทมาจองได้เลยค่ะ 💬',
     sayHiMessageEn: 'Hello there 👋\n\nCheck Kru Beever’s schedule, pick your preferred date\nand chat with us to book your session! 💬',
-    welcomeGuideIntroTh: 'Me.My.Mind Mindfulness Studio ยินดีให้บริการค่ะ\n\nสามารถใช้ปฏิทินนี้เพื่อเช็คดูเบื้องต้นว่า ในวันที่คุณต้องการจอง:',
-    welcomeGuideIntroEn: "Welcome to Me.My.Mind Mindfulness Studio!\n\nYou can use this calendar to check, for the date you'd like to book:",
-    welcomeGuideItem1Th: 'ครูบีอยู่จังหวัดไหน?',
-    welcomeGuideItem1En: 'Which branch/location Kru Bee is at',
-    welcomeGuideItem2Th: 'เปิดหรือปิดร้าน?',
-    welcomeGuideItem2En: 'Whether the studio is open or closed',
-    welcomeGuideItem3Th: 'มีกิจกรรมแบบกลุ่มให้เข้าร่วมไหม ออนไลน์ หรือ ออนไซต์?',
-    welcomeGuideItem3En: "Whether there's a group activity to join — online or on-site",
-    welcomeGuideItem4Th: 'คิววันนั้นเต็มหรือยัง?',
-    welcomeGuideItem4En: "Whether that day's queue is already full",
-    welcomeGuideOutroTh: 'ปฏิทินนี้ใช้ดูกิจกรรมกลุ่มเป็นหลักค่ะ บีไม่ได้อัพเดททุกการจองเคส Private ไว้ในนี้ เพื่อให้ดูสบายตา\n\nสำหรับลูกค้า Private เมื่อพอทราบวันที่อยู่สาขานั้นคร่าว ๆ แล้ว ทักแชทมาสอบถามคิวได้อีกทีใน Line นะคะ\n\nรักและเคารพ\nครูบีเว่อร์',
-    welcomeGuideOutroEn: "This calendar mainly shows group activities. Bee doesn't list every Private booking here, to keep it easy to read.\n\nFor Private bookings — once you have a rough idea of the date/branch, please message us on LINE to check availability.\n\nWith love and respect,\nKru Beever",
+    welcomeGuideMessageTh: '',
+    welcomeGuideMessageEn: '',
     logoUrl: '',
     defaultLanguage: 'th',
     currency: 'THB',
     timeFormat: '24h'
   };
-  const studioRes = db.exec("SELECT id, studioNameTh, studioNameEn, taglineTh, taglineEn, logoUrl, defaultLanguage, currency, timeFormat, sayHiMessageTh, sayHiMessageEn, welcomeGuideIntroTh, welcomeGuideIntroEn, welcomeGuideItem1Th, welcomeGuideItem1En, welcomeGuideItem2Th, welcomeGuideItem2En, welcomeGuideItem3Th, welcomeGuideItem3En, welcomeGuideItem4Th, welcomeGuideItem4En, welcomeGuideOutroTh, welcomeGuideOutroEn FROM studio_info WHERE id = 'default'");
+  const studioRes = db.exec("SELECT id, studioNameTh, studioNameEn, taglineTh, taglineEn, logoUrl, defaultLanguage, currency, timeFormat, sayHiMessageTh, sayHiMessageEn, welcomeGuideMessageTh, welcomeGuideMessageEn FROM studio_info WHERE id = 'default'");
   if (studioRes && studioRes.length > 0 && studioRes[0].values.length > 0) {
     const [
       id, studioNameTh, studioNameEn, taglineTh, taglineEn, logoUrl, defaultLanguage, currency, timeFormat,
       sayHiMessageTh, sayHiMessageEn,
-      welcomeGuideIntroTh, welcomeGuideIntroEn,
-      welcomeGuideItem1Th, welcomeGuideItem1En,
-      welcomeGuideItem2Th, welcomeGuideItem2En,
-      welcomeGuideItem3Th, welcomeGuideItem3En,
-      welcomeGuideItem4Th, welcomeGuideItem4En,
-      welcomeGuideOutroTh, welcomeGuideOutroEn
+      welcomeGuideMessageTh, welcomeGuideMessageEn
     ] = studioRes[0].values[0];
     studio = {
       id: (id as string) || 'default',
@@ -520,18 +505,8 @@ export function getAllStudioSettingsFromDb() {
       taglineEn: taglineEn !== null && taglineEn !== undefined ? (taglineEn as string) : '',
       sayHiMessageTh: sayHiMessageTh !== null && sayHiMessageTh !== undefined ? (sayHiMessageTh as string) : studio.sayHiMessageTh,
       sayHiMessageEn: sayHiMessageEn !== null && sayHiMessageEn !== undefined ? (sayHiMessageEn as string) : studio.sayHiMessageEn,
-      welcomeGuideIntroTh: welcomeGuideIntroTh !== null && welcomeGuideIntroTh !== undefined ? (welcomeGuideIntroTh as string) : studio.welcomeGuideIntroTh,
-      welcomeGuideIntroEn: welcomeGuideIntroEn !== null && welcomeGuideIntroEn !== undefined ? (welcomeGuideIntroEn as string) : studio.welcomeGuideIntroEn,
-      welcomeGuideItem1Th: welcomeGuideItem1Th !== null && welcomeGuideItem1Th !== undefined ? (welcomeGuideItem1Th as string) : studio.welcomeGuideItem1Th,
-      welcomeGuideItem1En: welcomeGuideItem1En !== null && welcomeGuideItem1En !== undefined ? (welcomeGuideItem1En as string) : studio.welcomeGuideItem1En,
-      welcomeGuideItem2Th: welcomeGuideItem2Th !== null && welcomeGuideItem2Th !== undefined ? (welcomeGuideItem2Th as string) : studio.welcomeGuideItem2Th,
-      welcomeGuideItem2En: welcomeGuideItem2En !== null && welcomeGuideItem2En !== undefined ? (welcomeGuideItem2En as string) : studio.welcomeGuideItem2En,
-      welcomeGuideItem3Th: welcomeGuideItem3Th !== null && welcomeGuideItem3Th !== undefined ? (welcomeGuideItem3Th as string) : studio.welcomeGuideItem3Th,
-      welcomeGuideItem3En: welcomeGuideItem3En !== null && welcomeGuideItem3En !== undefined ? (welcomeGuideItem3En as string) : studio.welcomeGuideItem3En,
-      welcomeGuideItem4Th: welcomeGuideItem4Th !== null && welcomeGuideItem4Th !== undefined ? (welcomeGuideItem4Th as string) : studio.welcomeGuideItem4Th,
-      welcomeGuideItem4En: welcomeGuideItem4En !== null && welcomeGuideItem4En !== undefined ? (welcomeGuideItem4En as string) : studio.welcomeGuideItem4En,
-      welcomeGuideOutroTh: welcomeGuideOutroTh !== null && welcomeGuideOutroTh !== undefined ? (welcomeGuideOutroTh as string) : studio.welcomeGuideOutroTh,
-      welcomeGuideOutroEn: welcomeGuideOutroEn !== null && welcomeGuideOutroEn !== undefined ? (welcomeGuideOutroEn as string) : studio.welcomeGuideOutroEn,
+      welcomeGuideMessageTh: welcomeGuideMessageTh !== null && welcomeGuideMessageTh !== undefined ? (welcomeGuideMessageTh as string) : studio.welcomeGuideMessageTh,
+      welcomeGuideMessageEn: welcomeGuideMessageEn !== null && welcomeGuideMessageEn !== undefined ? (welcomeGuideMessageEn as string) : studio.welcomeGuideMessageEn,
       logoUrl: (logoUrl as string) || '',
       defaultLanguage: (defaultLanguage as string) || 'th',
       currency: (currency as string) || 'THB',
@@ -714,7 +689,7 @@ adminRouter.post('/admin/settings', upload.single('logo'), (req: Request, res: R
       logoUrl = body.logoUrl;
     }
 
-    const existRes = db.exec("SELECT sayHiMessageTh, sayHiMessageEn, welcomeGuideIntroTh, welcomeGuideIntroEn, welcomeGuideItem1Th, welcomeGuideItem1En, welcomeGuideItem2Th, welcomeGuideItem2En, welcomeGuideItem3Th, welcomeGuideItem3En, welcomeGuideItem4Th, welcomeGuideItem4En, welcomeGuideOutroTh, welcomeGuideOutroEn FROM studio_info WHERE id = 'default'");
+    const existRes = db.exec("SELECT sayHiMessageTh, sayHiMessageEn, welcomeGuideMessageTh, welcomeGuideMessageEn FROM studio_info WHERE id = 'default'");
     const existing = (existRes && existRes.length > 0 && existRes[0].values.length > 0) ? existRes[0].values[0] : [];
 
     const studioParams = [
@@ -724,18 +699,8 @@ adminRouter.post('/admin/settings', upload.single('logo'), (req: Request, res: R
       body.taglineEn !== undefined ? body.taglineEn : 'Your Daily Rituals of Self-Love',
       body.sayHiMessageTh !== undefined ? body.sayHiMessageTh : (existing[0] ?? null),
       body.sayHiMessageEn !== undefined ? body.sayHiMessageEn : (existing[1] ?? null),
-      body.welcomeGuideIntroTh !== undefined ? body.welcomeGuideIntroTh : (existing[2] ?? null),
-      body.welcomeGuideIntroEn !== undefined ? body.welcomeGuideIntroEn : (existing[3] ?? null),
-      body.welcomeGuideItem1Th !== undefined ? body.welcomeGuideItem1Th : (existing[4] ?? null),
-      body.welcomeGuideItem1En !== undefined ? body.welcomeGuideItem1En : (existing[5] ?? null),
-      body.welcomeGuideItem2Th !== undefined ? body.welcomeGuideItem2Th : (existing[6] ?? null),
-      body.welcomeGuideItem2En !== undefined ? body.welcomeGuideItem2En : (existing[7] ?? null),
-      body.welcomeGuideItem3Th !== undefined ? body.welcomeGuideItem3Th : (existing[8] ?? null),
-      body.welcomeGuideItem3En !== undefined ? body.welcomeGuideItem3En : (existing[9] ?? null),
-      body.welcomeGuideItem4Th !== undefined ? body.welcomeGuideItem4Th : (existing[10] ?? null),
-      body.welcomeGuideItem4En !== undefined ? body.welcomeGuideItem4En : (existing[11] ?? null),
-      body.welcomeGuideOutroTh !== undefined ? body.welcomeGuideOutroTh : (existing[12] ?? null),
-      body.welcomeGuideOutroEn !== undefined ? body.welcomeGuideOutroEn : (existing[13] ?? null),
+      body.welcomeGuideMessageTh !== undefined ? body.welcomeGuideMessageTh : (existing[2] ?? null),
+      body.welcomeGuideMessageEn !== undefined ? body.welcomeGuideMessageEn : (existing[3] ?? null),
       logoUrl,
       body.defaultLanguage || 'th',
       body.currency || 'THB',
@@ -746,15 +711,10 @@ adminRouter.post('/admin/settings', upload.single('logo'), (req: Request, res: R
       INSERT OR REPLACE INTO studio_info (
         id, studioNameTh, studioNameEn, taglineTh, taglineEn,
         sayHiMessageTh, sayHiMessageEn,
-        welcomeGuideIntroTh, welcomeGuideIntroEn,
-        welcomeGuideItem1Th, welcomeGuideItem1En,
-        welcomeGuideItem2Th, welcomeGuideItem2En,
-        welcomeGuideItem3Th, welcomeGuideItem3En,
-        welcomeGuideItem4Th, welcomeGuideItem4En,
-        welcomeGuideOutroTh, welcomeGuideOutroEn,
+        welcomeGuideMessageTh, welcomeGuideMessageEn,
         logoUrl, defaultLanguage, currency, timeFormat, updatedAt
       )
-      VALUES ('default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      VALUES ('default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     `, studioParams);
 
     // Also update contact if provided in the same request

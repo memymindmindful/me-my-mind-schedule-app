@@ -14,18 +14,50 @@ export const DEFAULT_STUDIO_SETTINGS: AllStudioSettings = {
     taglineEn: 'Your Daily Rituals of Self-Love',
     sayHiMessageTh: 'สวัสดีค่ะ 👋\n\nเช็คตารางครูบี เลือกวันที่ต้องการ\n แล้วทักแชทมาจองได้เลยค่ะ 💬',
     sayHiMessageEn: 'Hello there 👋\n\nCheck Kru Beever’s schedule, pick your preferred date\nand chat with us to book your session! 💬',
-    welcomeGuideIntroTh: 'Me.My.Mind Mindfulness Studio ยินดีให้บริการค่ะ\n\nสามารถใช้ปฏิทินนี้เพื่อเช็คดูเบื้องต้นว่า ในวันที่คุณต้องการจอง:',
-    welcomeGuideIntroEn: "Welcome to Me.My.Mind Mindfulness Studio!\n\nYou can use this calendar to check, for the date you'd like to book:",
-    welcomeGuideItem1Th: 'ครูบีอยู่จังหวัดไหน?',
-    welcomeGuideItem1En: 'Which branch/location Kru Bee is at',
-    welcomeGuideItem2Th: 'เปิดหรือปิดร้าน?',
-    welcomeGuideItem2En: 'Whether the studio is open or closed',
-    welcomeGuideItem3Th: 'มีกิจกรรมแบบกลุ่มให้เข้าร่วมไหม ออนไลน์ หรือ ออนไซต์?',
-    welcomeGuideItem3En: "Whether there's a group activity to join — online or on-site",
-    welcomeGuideItem4Th: 'คิววันนั้นเต็มหรือยัง?',
-    welcomeGuideItem4En: "Whether that day's queue is already full",
-    welcomeGuideOutroTh: 'ปฏิทินนี้ใช้ดูกิจกรรมกลุ่มเป็นหลักค่ะ บีไม่ได้อัพเดททุกการจองเคส Private ไว้ในนี้ เพื่อให้ดูสบายตา\n\nสำหรับลูกค้า Private เมื่อพอทราบวันที่อยู่สาขานั้นคร่าว ๆ แล้ว ทักแชทมาสอบถามคิวได้อีกทีใน Line นะคะ\n\nรักและเคารพ\nครูบีเว่อร์',
-    welcomeGuideOutroEn: "This calendar mainly shows group activities. Bee doesn't list every Private booking here, to keep it easy to read.\n\nFor Private bookings — once you have a rough idea of the date/branch, please message us on LINE to check availability.\n\nWith love and respect,\nKru Beever",
+    welcomeGuideMessageTh: `Me.My.Mind Mindfulness Studio ยินดีต้อนรับค่ะ 🤍
+
+ก่อนจองคิว ลองเช็คปฏิทินนี้ดูก่อนได้เลยค่ะ ว่าในวันที่สนใจ:
+
+① ครูบีอยู่สาขาไหน
+   ⚪ ขาว = นครสวรรค์  🩷 ชมพูอ่อน = ราชเทวี  🤎 น้ำตาล = ออนทัวร์  💜 ม่วง = ออนไลน์
+
+② วันนั้นเปิดหรือปิดร้าน
+   ⚫ สีดำ = ปิดร้าน  🔵 สีฟ้า = วันทำความสะอาดใหญ่ (Big Cleaning)
+
+③ มีกิจกรรมกลุ่มแบบไหนบ้าง
+   ⭐ ดาว = กิจกรรมไฮไลท์ประจำเดือน  🎥 กล้อง = กิจกรรมออนไลน์
+
+④ คิววันนั้นเต็มหรือยัง
+   🔴 วงกลมขอบแดง = เต็มแล้วนะคะ
+
+ปฏิทินนี้โชว์แค่กิจกรรมกลุ่มเป็นหลักค่ะ ส่วนคิว Private บีไม่ได้ลงไว้ในนี้ทุกเคส เพื่อให้หน้าจอดูสบายตา ไม่รกเกินไป
+
+พอทราบคร่าว ๆ แล้วว่าวันนั้นครูบีอยู่สาขาไหน ทักแชทมาถามคิว Private เพิ่มเติมได้เลยทาง LINE นะคะ 💬
+
+รักและเคารพ
+ครูบีเว่อร์ 🤍`,
+    welcomeGuideMessageEn: `Welcome to Me.My.Mind Mindfulness Studio 🤍
+
+Before you book, feel free to browse this calendar to see, for your preferred date:
+
+① Which branch Kru Bee will be at
+   ⚪ White = Nakhonsawan  🩷 Pink = Ratchathewi  🤎 Brown = On-Tour  💜 Purple = Online
+
+② Whether the studio is open or closed that day
+   ⚫ Black = Closed  🔵 Blue = Big Cleaning day
+
+③ What kind of group session is on offer
+   ⭐ Star = Monthly featured event  🎥 Camera = Online session
+
+④ Whether the day is already fully booked
+   🔴 Red-ringed circle = Fully booked
+
+This calendar focuses on group sessions — Private bookings aren't all listed here, simply to keep things clean and easy to read.
+
+Once you've narrowed down which branch and date work for you, simply message us on LINE and we'll be happy to confirm availability for your Private session. 💬
+
+With love and respect,
+Kru Beever 🤍`,
     logoUrl: '',
     defaultLanguage: 'th',
     currency: 'THB',

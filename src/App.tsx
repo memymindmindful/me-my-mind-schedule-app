@@ -14,8 +14,6 @@ import { AdminDashboard } from './components/admin/AdminDashboard';
 import { Language, TRANSLATIONS } from './utils/translations';
 import { CheckCircle } from 'lucide-react';
 
-const WELCOME_GUIDE_SEEN_KEY = 'mmm_welcome_guide_seen_v1';
-
 export default function App() {
   // Check URL query param ?view=admin or #admin
   const [isAdminView, setIsAdminView] = useState<boolean>(() => {
@@ -95,20 +93,10 @@ export default function App() {
   // Welcome / Calendar Guide Modal state
   const [showWelcomeGuide, setShowWelcomeGuide] = useState<boolean>(false);
 
-  useEffect(() => {
-    try {
-      if (!localStorage.getItem(WELCOME_GUIDE_SEEN_KEY)) {
-        setShowWelcomeGuide(true);
-      }
-    } catch (err) {
-      console.warn('localStorage read error:', err);
-    }
-  }, []);
-
   const handleCloseWelcomeGuide = () => {
     setShowWelcomeGuide(false);
     try {
-      localStorage.setItem(WELCOME_GUIDE_SEEN_KEY, 'true');
+      localStorage.setItem('mmm_has_seen_welcome_guide', 'true');
     } catch (err) {
       console.warn('localStorage write error:', err);
     }
@@ -182,6 +170,16 @@ export default function App() {
       }
     }).catch((err) => {
       console.warn('Using default settings fallback:', err);
+    }).finally(() => {
+      if (!isMounted) return;
+      try {
+        const hasSeenGuide = localStorage.getItem('mmm_has_seen_welcome_guide');
+        if (!hasSeenGuide) {
+          setShowWelcomeGuide(true);
+        }
+      } catch (err) {
+        console.warn('localStorage read error:', err);
+      }
     });
 
     const handleSettingsUpdated = (evt: any) => {
@@ -384,7 +382,7 @@ export default function App() {
               <CalendarHeader
                 onBack={handleBackToLine}
                 onOptionsClick={() => setIsOptionsMenuOpen(true)}
-                onOpenWelcomeGuide={() => setShowWelcomeGuide(true)}
+                onShowWelcomeGuide={() => setShowWelcomeGuide(true)}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 lang={lang}

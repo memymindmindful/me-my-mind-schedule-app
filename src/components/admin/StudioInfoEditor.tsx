@@ -200,144 +200,34 @@ export const StudioInfoEditor: React.FC<StudioInfoEditorProps> = ({ initialData,
             2. ข้อความต้อนรับ / คู่มือใช้ปฏิทิน (Welcome & Calendar Guide Popup)
           </h3>
           <p className="text-xs text-[#777] mt-0.5">
-            ไอคอนสีต่าง ๆ (วงกลมสาขา, สถานะเปิด/ปิด, ดาวไฮไลท์, กล้องวิดีโอออนไลน์, วงแหวนเต็มแล้ว) จะแสดงอัตโนมัติตรงตามปฏิทินจริงเสมอ — แก้ไขได้เฉพาะข้อความอธิบาย
+            ข้อความแนะนำการอ่านสัญลักษณ์และคู่มือสำหรับผู้ใช้ใหม่ (รองรับ Emoji และการขึ้นบรรทัดใหม่)
           </p>
         </div>
 
-        {/* Intro */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-bold text-[#333]">
-            ข้อความเปิดต้อนรับ (Intro Message)
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-[#333]">
+              ข้อความต้อนรับและวิธีใช้ปฏิทิน (ภาษาไทย)
+            </label>
             <textarea
-              value={formData.welcomeGuideIntroTh || ''}
-              onChange={(e) => setFormData({ ...formData, welcomeGuideIntroTh: e.target.value })}
-              rows={3}
-              placeholder="ข้อความเปิด (ไทย)"
-              className="w-full px-3.5 py-2 rounded-xl border border-[#DDD5CC] text-xs focus:outline-none focus:border-[#E84D84] bg-[#FAF8F5] resize-none"
+              value={formData.welcomeGuideMessageTh || ''}
+              onChange={(e) => setFormData({ ...formData, welcomeGuideMessageTh: e.target.value })}
+              rows={14}
+              placeholder="ข้อความภาษาไทย..."
+              className="w-full px-3.5 py-3 rounded-xl border border-[#DDD5CC] text-xs leading-relaxed focus:outline-none focus:border-[#E84D84] bg-[#FAF8F5] resize-y font-mono"
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-[#333]">
+              Welcome & Calendar Guide Message (English)
+            </label>
             <textarea
-              value={formData.welcomeGuideIntroEn || ''}
-              onChange={(e) => setFormData({ ...formData, welcomeGuideIntroEn: e.target.value })}
-              rows={3}
-              placeholder="Intro (English)"
-              className="w-full px-3.5 py-2 rounded-xl border border-[#DDD5CC] text-xs focus:outline-none focus:border-[#E84D84] bg-[#FAF8F5] resize-none"
-            />
-          </div>
-        </div>
-
-        {/* Item 1: Branch */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-[#555]">
-            ข้อ 1: จุดบอกสาขา / วงกลมสี (Item 1: Branch locations)
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <input
-              type="text"
-              value={formData.welcomeGuideItem1Th || ''}
-              onChange={(e) => setFormData({ ...formData, welcomeGuideItem1Th: e.target.value })}
-              placeholder="ข้อ 1: สาขา (ไทย)"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-[#DDD5CC] text-xs focus:outline-none focus:border-[#E84D84] bg-[#FAF8F5]"
-            />
-            <input
-              type="text"
-              value={formData.welcomeGuideItem1En || ''}
-              onChange={(e) => setFormData({ ...formData, welcomeGuideItem1En: e.target.value })}
-              placeholder="Item 1: Branch (English)"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-[#DDD5CC] text-xs focus:outline-none focus:border-[#E84D84] bg-[#FAF8F5]"
-            />
-          </div>
-        </div>
-
-        {/* Item 2: Open/Closed */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-[#555]">
-            ข้อ 2: สถานะเปิดหรือปิดร้าน (Item 2: Open / Closed)
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <input
-              type="text"
-              value={formData.welcomeGuideItem2Th || ''}
-              onChange={(e) => setFormData({ ...formData, welcomeGuideItem2Th: e.target.value })}
-              placeholder="ข้อ 2: เปิดหรือปิดร้าน (ไทย)"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-[#DDD5CC] text-xs focus:outline-none focus:border-[#E84D84] bg-[#FAF8F5]"
-            />
-            <input
-              type="text"
-              value={formData.welcomeGuideItem2En || ''}
-              onChange={(e) => setFormData({ ...formData, welcomeGuideItem2En: e.target.value })}
-              placeholder="Item 2: Open/Closed (English)"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-[#DDD5CC] text-xs focus:outline-none focus:border-[#E84D84] bg-[#FAF8F5]"
-            />
-          </div>
-        </div>
-
-        {/* Item 3: Special Star & Online Video */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-[#555]">
-            ข้อ 3: กิจกรรมกลุ่ม ออนไลน์ / ออนไซต์ (Item 3: Group activities)
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <input
-              type="text"
-              value={formData.welcomeGuideItem3Th || ''}
-              onChange={(e) => setFormData({ ...formData, welcomeGuideItem3Th: e.target.value })}
-              placeholder="ข้อ 3: กิจกรรมกลุ่ม ออนไลน์/ออนไซต์ (ไทย)"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-[#DDD5CC] text-xs focus:outline-none focus:border-[#E84D84] bg-[#FAF8F5]"
-            />
-            <input
-              type="text"
-              value={formData.welcomeGuideItem3En || ''}
-              onChange={(e) => setFormData({ ...formData, welcomeGuideItem3En: e.target.value })}
-              placeholder="Item 3: Group activities (English)"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-[#DDD5CC] text-xs focus:outline-none focus:border-[#E84D84] bg-[#FAF8F5]"
-            />
-          </div>
-        </div>
-
-        {/* Item 4: Fully Booked Ring */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-[#555]">
-            ข้อ 4: คิวเต็มแล้ว / วงแหวนแดง (Item 4: Fully Booked)
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <input
-              type="text"
-              value={formData.welcomeGuideItem4Th || ''}
-              onChange={(e) => setFormData({ ...formData, welcomeGuideItem4Th: e.target.value })}
-              placeholder="ข้อ 4: คิวเต็มแล้ว (ไทย)"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-[#DDD5CC] text-xs focus:outline-none focus:border-[#E84D84] bg-[#FAF8F5]"
-            />
-            <input
-              type="text"
-              value={formData.welcomeGuideItem4En || ''}
-              onChange={(e) => setFormData({ ...formData, welcomeGuideItem4En: e.target.value })}
-              placeholder="Item 4: Fully Booked (English)"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-[#DDD5CC] text-xs focus:outline-none focus:border-[#E84D84] bg-[#FAF8F5]"
-            />
-          </div>
-        </div>
-
-        {/* Outro */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-bold text-[#333]">
-            ข้อความปิดท้าย (Outro Message & Private Notes)
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <textarea
-              value={formData.welcomeGuideOutroTh || ''}
-              onChange={(e) => setFormData({ ...formData, welcomeGuideOutroTh: e.target.value })}
-              rows={4}
-              placeholder="ข้อความปิดท้าย (ไทย)"
-              className="w-full px-3.5 py-2 rounded-xl border border-[#DDD5CC] text-xs focus:outline-none focus:border-[#E84D84] bg-[#FAF8F5] resize-none"
-            />
-            <textarea
-              value={formData.welcomeGuideOutroEn || ''}
-              onChange={(e) => setFormData({ ...formData, welcomeGuideOutroEn: e.target.value })}
-              rows={4}
-              placeholder="Outro (English)"
-              className="w-full px-3.5 py-2 rounded-xl border border-[#DDD5CC] text-xs focus:outline-none focus:border-[#E84D84] bg-[#FAF8F5] resize-none"
+              value={formData.welcomeGuideMessageEn || ''}
+              onChange={(e) => setFormData({ ...formData, welcomeGuideMessageEn: e.target.value })}
+              rows={14}
+              placeholder="English message..."
+              className="w-full px-3.5 py-3 rounded-xl border border-[#DDD5CC] text-xs leading-relaxed focus:outline-none focus:border-[#E84D84] bg-[#FAF8F5] resize-y font-mono"
             />
           </div>
         </div>

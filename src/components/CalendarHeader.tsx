@@ -1,11 +1,11 @@
 import React from 'react';
-import { ChevronLeft, MoreHorizontal, Search, X, Globe, RefreshCw, Calendar } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Search, X, Globe, RefreshCw, HelpCircle } from 'lucide-react';
 import { Language, TRANSLATIONS } from '../utils/translations';
 
 interface CalendarHeaderProps {
   onBack: () => void;
   onOptionsClick: () => void;
-  onOpenWelcomeGuide: () => void;
+  onShowWelcomeGuide: () => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   lang: Language;
@@ -17,7 +17,7 @@ interface CalendarHeaderProps {
 export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   onBack,
   onOptionsClick,
-  onOpenWelcomeGuide,
+  onShowWelcomeGuide,
   searchQuery,
   onSearchChange,
   lang,
@@ -52,12 +52,12 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           {/* Calendar Guide Icon Button */}
           <button
             id="header-guide-btn"
-            onClick={onOpenWelcomeGuide}
+            onClick={onShowWelcomeGuide}
             className="p-1.5 text-[#E84D84] hover:bg-[#E84D84]/10 rounded-full transition-colors cursor-pointer"
             title={lang === 'th' ? 'วิธีใช้ปฏิทิน' : 'How to use this calendar'}
-            aria-label="Calendar Guide"
+            aria-label="Help"
           >
-            <Calendar className="w-4 h-4 stroke-[2.5]" />
+            <HelpCircle className="w-5 h-5 stroke-[2.5]" />
           </button>
 
           {/* Refresh Button */}
