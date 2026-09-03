@@ -44,6 +44,7 @@ const DEFAULT_EVENT_FORM: Partial<ScheduleEvent> = {
   name: '',
   englishName: '',
   subtitle: '',
+  subtitleEn: '',
   category: 'Sound Healing / Sound Baths',
   branch: 'Ratchathewi',
   locationDetails: 'สาขาราชเทวี (ชั้น 5 อาคารพญาไทพลาซ่า ติด BTS พญาไท)',
@@ -57,11 +58,15 @@ const DEFAULT_EVENT_FORM: Partial<ScheduleEvent> = {
   bookedCount: 0,
   level: 'All Levels',
   description: '',
+  descriptionEn: '',
   posterUrl: '',
   useGlobalFacilitator: true,
   benefits: ['คืนสมดุลให้ร่างกายและจิตใจ', 'ผ่อนคลายกล้ามเนื้อและระบบประสาท', 'คลายความตึงเครียดสะสม'],
+  benefitsEn: ['Restore mind-body harmony', 'Soothe nervous system and muscles', 'Release accumulated tension'],
   sensoryNotes: ['Tibetan Singing Bowls', 'Organic Herbal Tea', 'Essential Oil Mist'],
+  sensoryNotesEn: ['Tibetan Singing Bowls', 'Organic Herbal Tea', 'Essential Oil Mist'],
   preparationTips: ['สวมใส่ชุดหลวมสบาย ไม่รัดแน่น'],
+  preparationTipsEn: ['Wear comfortable, loose-fitting clothes'],
   isSpecialStar: false,
   isFeatured: true,
   adminNote: '',
@@ -69,6 +74,19 @@ const DEFAULT_EVENT_FORM: Partial<ScheduleEvent> = {
 };
 
 const POPULAR_SENSORY_NOTES = [
+  'Tibetan Singing Bowls',
+  'Crystal Singing Bowls',
+  'Organic Herbal Tea',
+  'Essential Oil Mist',
+  'Aromatherapy Hydrosol',
+  'Somatic Breathwork',
+  'Acoustic Gong Bath',
+  'Tuning Forks (432Hz)',
+  'Weighted Eye Pillow',
+  'Reflective Journaling'
+];
+
+const POPULAR_SENSORY_NOTES_EN = [
   'Tibetan Singing Bowls',
   'Crystal Singing Bowls',
   'Organic Herbal Tea',
@@ -89,6 +107,30 @@ const POPULAR_BENEFITS = [
   'ฟื้นฟูผิวหน้าและผ่อนคลายกล้ามเนื้อ',
   'เสริมสร้างสติและสมาธิในการทำงาน',
   'ปลดปล่อยอารมณ์และประจุความเครียด'
+];
+
+const POPULAR_BENEFITS_EN = [
+  'Restore mind-body harmony',
+  'Soothe nervous system and muscles',
+  'Release accumulated tension',
+  'Promote deeper delta-wave sleep',
+  'Facial rejuvenation & muscular release',
+  'Cultivate mindfulness & focus',
+  'Emotional release & grounding'
+];
+
+const POPULAR_PREP_TIPS = [
+  'สวมใส่ชุดหลวมสบาย ไม่รัดแน่น',
+  'เดินทางมาถึงก่อนเวลา 10 นาที',
+  'งดรับประทานอาหารมื้อหนักก่อนเข้าคลาส 1 ชม.',
+  'พกกระบอกน้ำส่วนตัว'
+];
+
+const POPULAR_PREP_TIPS_EN = [
+  'Wear comfortable, loose-fitting clothes',
+  'Arrive 10 minutes prior to session',
+  'Avoid heavy meals 1 hour before',
+  'Bring a personal water bottle'
 ];
 
 export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
@@ -122,8 +164,11 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
 
   // Tag inputs state
   const [newSensoryNoteInput, setNewSensoryNoteInput] = useState('');
+  const [newSensoryNoteEnInput, setNewSensoryNoteEnInput] = useState('');
   const [newBenefitInput, setNewBenefitInput] = useState('');
+  const [newBenefitEnInput, setNewBenefitEnInput] = useState('');
   const [newPrepTipInput, setNewPrepTipInput] = useState('');
+  const [newPrepTipEnInput, setNewPrepTipEnInput] = useState('');
 
   // Calculate days in currently selected form month/year
   const daysInFormMonth = new Date(formYearNum, formMonthNum, 0).getDate();
@@ -224,6 +269,23 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     }));
   };
 
+  const handleAddSensoryNoteEn = (noteText: string) => {
+    const trimmed = noteText.trim();
+    if (!trimmed) return;
+    const current = formData.sensoryNotesEn || [];
+    if (!current.includes(trimmed)) {
+      setFormData(prev => ({ ...prev, sensoryNotesEn: [...(prev.sensoryNotesEn || []), trimmed] }));
+    }
+    setNewSensoryNoteEnInput('');
+  };
+
+  const handleRemoveSensoryNoteEn = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      sensoryNotesEn: (prev.sensoryNotesEn || []).filter((_, i) => i !== index)
+    }));
+  };
+
   const handleAddBenefit = (benefitText: string) => {
     const trimmed = benefitText.trim();
     if (!trimmed) return;
@@ -241,6 +303,23 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     }));
   };
 
+  const handleAddBenefitEn = (benefitText: string) => {
+    const trimmed = benefitText.trim();
+    if (!trimmed) return;
+    const current = formData.benefitsEn || [];
+    if (!current.includes(trimmed)) {
+      setFormData(prev => ({ ...prev, benefitsEn: [...(prev.benefitsEn || []), trimmed] }));
+    }
+    setNewBenefitEnInput('');
+  };
+
+  const handleRemoveBenefitEn = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      benefitsEn: (prev.benefitsEn || []).filter((_, i) => i !== index)
+    }));
+  };
+
   const handleAddPrepTip = (tipText: string) => {
     const trimmed = tipText.trim();
     if (!trimmed) return;
@@ -255,6 +334,23 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     setFormData(prev => ({
       ...prev,
       preparationTips: (prev.preparationTips || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleAddPrepTipEn = (tipText: string) => {
+    const trimmed = tipText.trim();
+    if (!trimmed) return;
+    const current = formData.preparationTipsEn || [];
+    if (!current.includes(trimmed)) {
+      setFormData(prev => ({ ...prev, preparationTipsEn: [...(prev.preparationTipsEn || []), trimmed] }));
+    }
+    setNewPrepTipEnInput('');
+  };
+
+  const handleRemovePrepTipEn = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      preparationTipsEn: (prev.preparationTipsEn || []).filter((_, i) => i !== index)
     }));
   };
 
@@ -298,8 +394,11 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     setFormMonthNum(currentMonth + 1);
     setFormYearNum(currentYear);
     setNewSensoryNoteInput('');
+    setNewSensoryNoteEnInput('');
     setNewBenefitInput('');
+    setNewBenefitEnInput('');
     setNewPrepTipInput('');
+    setNewPrepTipEnInput('');
 
     const defaultFacilitatorProfile = allFacilitators[0] || globalFacilitator;
     const defaultFacilitator: Facilitator = {
@@ -317,8 +416,11 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
       facilitatorId: defaultFacilitatorProfile?.id,
       facilitator: defaultFacilitator,
       sensoryNotes: ['Tibetan Singing Bowls', 'Organic Herbal Tea', 'Essential Oil Mist'],
+      sensoryNotesEn: ['Tibetan Singing Bowls', 'Organic Herbal Tea', 'Essential Oil Mist'],
       benefits: ['คืนสมดุลให้ร่างกายและจิตใจ', 'ผ่อนคลายกล้ามเนื้อและระบบประสาท', 'คลายความตึงเครียดสะสม'],
+      benefitsEn: ['Restore mind-body harmony', 'Soothe nervous system and muscles', 'Release accumulated tension'],
       preparationTips: ['สวมใส่ชุดหลวมสบาย ไม่รัดแน่น'],
+      preparationTipsEn: ['Wear comfortable, loose-fitting clothes'],
       isFree: false,
       dateStr: `${currentYear}-${targetMonthStr}-${String(day).padStart(2, '0')}`,
       dateDisplay: `${String(day).padStart(2, '0')}.${targetMonthStr}`
@@ -342,15 +444,25 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     setFormMonthNum(evtMonth);
     setFormDayNum(evtDay);
     setNewSensoryNoteInput('');
+    setNewSensoryNoteEnInput('');
     setNewBenefitInput('');
+    setNewBenefitEnInput('');
     setNewPrepTipInput('');
+    setNewPrepTipEnInput('');
 
     setFormData({ 
       ...evt,
+      subtitle: evt.subtitle || '',
+      subtitleEn: evt.subtitleEn || '',
+      description: evt.description || '',
+      descriptionEn: evt.descriptionEn || '',
       useGlobalFacilitator: evt.useGlobalFacilitator ?? true,
       sensoryNotes: Array.isArray(evt.sensoryNotes) ? evt.sensoryNotes : [],
+      sensoryNotesEn: Array.isArray(evt.sensoryNotesEn) ? evt.sensoryNotesEn : [],
       benefits: Array.isArray(evt.benefits) ? evt.benefits : [],
+      benefitsEn: Array.isArray(evt.benefitsEn) ? evt.benefitsEn : [],
       preparationTips: Array.isArray(evt.preparationTips) ? evt.preparationTips : [],
+      preparationTipsEn: Array.isArray(evt.preparationTipsEn) ? evt.preparationTipsEn : [],
       isFree: evt.isFree ?? (evt.priceThb === 0)
     });
     setIsEditingModalOpen(true);
@@ -572,6 +684,7 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
       name: formData.name.trim(),
       englishName: formData.englishName?.trim() || formData.name.trim(),
       subtitle: formData.subtitle?.trim() || '',
+      subtitleEn: formData.subtitleEn?.trim() || '',
       category: (formData.category as OfferingCategory) || 'Workshops & Training',
       branch: (formData.branch as BranchLocation) || 'Ratchathewi',
       locationDetails: formData.locationDetails?.trim() || '',
@@ -596,9 +709,13 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
       bookedCount: isFullyBooked && bookedCount < capacity ? capacity : bookedCount,
       level: formData.level || 'All Levels',
       sensoryNotes: formData.sensoryNotes || [],
+      sensoryNotesEn: formData.sensoryNotesEn || [],
       description: formData.description?.trim() || 'รายละเอียดคลาสและศาสตร์การดูแลบำบัด',
+      descriptionEn: formData.descriptionEn?.trim() || '',
       benefits: formData.benefits || [],
+      benefitsEn: formData.benefitsEn || [],
       preparationTips: formData.preparationTips || [],
+      preparationTipsEn: formData.preparationTipsEn || [],
       posterUrl: formData.posterUrl,
       posterTag: formData.posterTag,
       isSpecialStar: !!formData.isSpecialStar,
@@ -1103,29 +1220,40 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
                 </div>
               </div>
 
-              {/* Row 3: Subtitle / Tagline & Short Admin Note */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Row 3: Subtitle / Tagline (TH & EN) & Short Admin Note */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-[#555] mb-1">คำบรรยายสั้น (Subtitle)</label>
+                  <label className="block text-[11px] font-semibold text-[#555] mb-1">คำบรรยายสั้น (Subtitle - TH)</label>
                   <input
                     type="text"
                     value={formData.subtitle || ''}
                     onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
-                    placeholder="เช่น Acoustic vibrational release"
+                    placeholder="เช่น คลื่นเสียงบำบัดคืนสมดุลจิตใจ"
+                    className="w-full px-3 py-2 bg-[#FAF8F5] rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#555] mb-1">คำบรรยายสั้น (Subtitle - EN)</label>
+                  <input
+                    type="text"
+                    value={formData.subtitleEn || ''}
+                    onChange={(e) => setFormData({ ...formData, subtitleEn: e.target.value })}
+                    placeholder="e.g. Acoustic vibrational release"
                     className="w-full px-3 py-2 bg-[#FAF8F5] rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
                   />
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-semibold text-[#555] mb-1 flex items-center justify-between">
-                    <span>โน้ตย่อของกิจกรรม (Admin Note / Badge)</span>
-                    <span className="text-[10px] text-[#888]">เช่น รอบพิเศษ, รับ 6 ท่าน</span>
+                    <span>โน้ตย่อ (Admin Note / Badge)</span>
+                    <span className="text-[10px] text-[#888]">เช่น รอบพิเศษ</span>
                   </label>
                   <input
                     type="text"
                     value={formData.adminNote || ''}
                     onChange={(e) => setFormData({ ...formData, adminNote: e.target.value })}
-                    placeholder="กรอกโน้ตสั้น ๆ สำหรับแอดมินหรือแสดงป้ายกำกับ"
+                    placeholder="กรอกโน้ตสั้น ๆ สำหรับแอดมิน"
                     className="w-full px-3 py-2 bg-[#FAF8F5] rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
                   />
                 </div>
@@ -1338,16 +1466,28 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
                 )}
               </div>
 
-              {/* Row 8: Description */}
-              <div>
-                <label className="block text-[11px] font-semibold text-[#555] mb-1">รายละเอียดคลาส (Description)</label>
-                <textarea
-                  rows={3}
-                  value={formData.description || ''}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="อธิบายกิจกรรม ผลลัพธ์ที่จะได้รับ และบรรยากาศ..."
-                  className="w-full px-3 py-2 bg-[#FAF8F5] rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
-                />
+              {/* Row 8: Description (TH & EN) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#555] mb-1">รายละเอียดคลาส (Description - TH)</label>
+                  <textarea
+                    rows={3}
+                    value={formData.description || ''}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="อธิบายกิจกรรม ผลลัพธ์ที่จะได้รับ และบรรยากาศ (ภาษาไทย)..."
+                    className="w-full px-3 py-2 bg-[#FAF8F5] rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#555] mb-1">รายละเอียดคลาส (Description - EN)</label>
+                  <textarea
+                    rows={3}
+                    value={formData.descriptionEn || ''}
+                    onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
+                    placeholder="Class description, sensory elements, experience (English)..."
+                    className="w-full px-3 py-2 bg-[#FAF8F5] rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
+                  />
+                </div>
               </div>
 
               {/* Row 9: Facilitator Sync & Custom Profile */}
@@ -1500,215 +1640,444 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
                 )}
               </div>
 
-              {/* Row 10: Sensory Notes / Tools (สัมผัสและเครื่องมือบำบัด) */}
-              <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#EFE8E1] space-y-2.5">
+              {/* Row 10: Sensory Notes / Tools (สัมผัสและเครื่องมือบำบัด - TH & EN) */}
+              <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#EFE8E1] space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="block text-[11px] font-bold text-[#1E1E1E] flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-[#E84D84]" />
                     <span>สัมผัสและเครื่องมือบำบัด (Sensory Notes / Tools)</span>
                   </label>
-                  <span className="text-[10px] text-[#888]">แสดงเป็นแท็กในหน้ารายละเอียด</span>
+                  <span className="text-[10px] text-[#888]">รองรับ 2 ภาษา (TH & EN)</span>
                 </div>
 
-                {/* Current Sensory Tags List */}
-                <div className="flex flex-wrap gap-1.5 min-h-[30px] p-2 bg-white rounded-xl border border-[#E5DFD7]">
-                  {(formData.sensoryNotes || []).length === 0 ? (
-                    <span className="text-[11px] text-[#999] italic py-0.5">ยังไม่มีรายการสัมผัส/เครื่องมือ กรุณาพิมพ์เพิ่มด้านล่าง</span>
-                  ) : (
-                    formData.sensoryNotes?.map((note, idx) => (
-                      <span 
-                        key={idx} 
-                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#FAF0F3] text-[#A82B5A] border border-[#F8DDE5] rounded-full text-xs font-medium"
-                      >
-                        <span>{note}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveSensoryNote(idx)}
-                          className="hover:text-rose-700 hover:bg-rose-100 rounded-full p-0.5 cursor-pointer"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))
-                  )}
-                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+                  {/* Thai Sensory Notes */}
+                  <div className="space-y-2 p-3 bg-white rounded-xl border border-[#E5DFD7]">
+                    <span className="text-[11px] font-bold text-[#A82B5A] block">🇹🇭 ภาษาไทย (Thai)</span>
+                    <div className="flex flex-wrap gap-1.5 min-h-[30px] p-2 bg-[#FAF8F5] rounded-lg border border-[#EFE8E1]">
+                      {(formData.sensoryNotes || []).length === 0 ? (
+                        <span className="text-[10px] text-[#999] italic py-0.5">ยังไม่มีรายการภาษาไทย</span>
+                      ) : (
+                        formData.sensoryNotes?.map((note, idx) => (
+                          <span 
+                            key={idx} 
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-[#FAF0F3] text-[#A82B5A] border border-[#F8DDE5] rounded-full text-xs font-medium"
+                          >
+                            <span>{note}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSensoryNote(idx)}
+                              className="hover:text-rose-700 hover:bg-rose-100 rounded-full p-0.5 cursor-pointer"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))
+                      )}
+                    </div>
 
-                {/* Add new sensory note input */}
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newSensoryNoteInput}
-                    onChange={(e) => setNewSensoryNoteInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddSensoryNote(newSensoryNoteInput);
-                      }
-                    }}
-                    placeholder="พิมพ์เครื่องมือบำบัด เช่น Tibetan Singing Bowls แล้วกด Enter"
-                    className="flex-1 px-3 py-2 bg-white rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleAddSensoryNote(newSensoryNoteInput)}
-                    className="px-3.5 py-2 bg-[#E84D84] text-white font-bold rounded-xl text-xs flex items-center gap-1 cursor-pointer hover:bg-[#D43D73] transition-colors flex-shrink-0"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>เพิ่ม</span>
-                  </button>
-                </div>
-
-                {/* Quick Add Suggestions */}
-                <div className="pt-1">
-                  <span className="text-[10px] text-[#777] block mb-1">ตัวเลือกแนะนำ (คลิกเพื่อเพิ่มด่วน):</span>
-                  <div className="flex flex-wrap gap-1">
-                    {POPULAR_SENSORY_NOTES.map((suggested, idx) => (
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        value={newSensoryNoteInput}
+                        onChange={(e) => setNewSensoryNoteInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddSensoryNote(newSensoryNoteInput);
+                          }
+                        }}
+                        placeholder="พิมพ์เครื่องมือ (TH) แล้วกด Enter"
+                        className="flex-1 px-2.5 py-1.5 bg-white rounded-lg border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
+                      />
                       <button
-                        key={idx}
                         type="button"
-                        onClick={() => handleAddSensoryNote(suggested)}
-                        className="px-2 py-0.5 bg-[#FAF7F5] hover:bg-[#FCE3EB] hover:text-[#A82B5A] border border-[#E5DFD7] hover:border-[#F8DDE5] rounded-md text-[10px] text-[#666] transition-colors cursor-pointer"
+                        onClick={() => handleAddSensoryNote(newSensoryNoteInput)}
+                        className="px-3 py-1.5 bg-[#E84D84] text-white font-bold rounded-lg text-xs flex items-center gap-1 cursor-pointer hover:bg-[#D43D73] transition-colors flex-shrink-0"
                       >
-                        + {suggested}
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>เพิ่ม</span>
                       </button>
-                    ))}
+                    </div>
+
+                    <div className="pt-0.5">
+                      <span className="text-[9px] text-[#888] block mb-1">แนะนำด่วน:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {POPULAR_SENSORY_NOTES.slice(0, 5).map((suggested, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleAddSensoryNote(suggested)}
+                            className="px-1.5 py-0.5 bg-[#FAF7F5] hover:bg-[#FCE3EB] hover:text-[#A82B5A] border border-[#E5DFD7] rounded text-[9px] text-[#666] transition-colors cursor-pointer"
+                          >
+                            + {suggested}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* English Sensory Notes */}
+                  <div className="space-y-2 p-3 bg-white rounded-xl border border-[#E5DFD7]">
+                    <span className="text-[11px] font-bold text-[#E84D84] block">🇬🇧 English</span>
+                    <div className="flex flex-wrap gap-1.5 min-h-[30px] p-2 bg-[#FAF8F5] rounded-lg border border-[#EFE8E1]">
+                      {(formData.sensoryNotesEn || []).length === 0 ? (
+                        <span className="text-[10px] text-[#999] italic py-0.5">No English notes yet</span>
+                      ) : (
+                        formData.sensoryNotesEn?.map((note, idx) => (
+                          <span 
+                            key={idx} 
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-[#FAF0F3] text-[#A82B5A] border border-[#F8DDE5] rounded-full text-xs font-medium"
+                          >
+                            <span>{note}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSensoryNoteEn(idx)}
+                              className="hover:text-rose-700 hover:bg-rose-100 rounded-full p-0.5 cursor-pointer"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        value={newSensoryNoteEnInput}
+                        onChange={(e) => setNewSensoryNoteEnInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddSensoryNoteEn(newSensoryNoteEnInput);
+                          }
+                        }}
+                        placeholder="Type tool (EN) e.g. Tibetan Singing Bowls"
+                        className="flex-1 px-2.5 py-1.5 bg-white rounded-lg border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAddSensoryNoteEn(newSensoryNoteEnInput)}
+                        className="px-3 py-1.5 bg-[#E84D84] text-white font-bold rounded-lg text-xs flex items-center gap-1 cursor-pointer hover:bg-[#D43D73] transition-colors flex-shrink-0"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add</span>
+                      </button>
+                    </div>
+
+                    <div className="pt-0.5">
+                      <span className="text-[9px] text-[#888] block mb-1">Quick suggestions:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {POPULAR_SENSORY_NOTES_EN.slice(0, 5).map((suggested, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleAddSensoryNoteEn(suggested)}
+                            className="px-1.5 py-0.5 bg-[#FAF7F5] hover:bg-[#FCE3EB] hover:text-[#A82B5A] border border-[#E5DFD7] rounded text-[9px] text-[#666] transition-colors cursor-pointer"
+                          >
+                            + {suggested}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Row 11: Key Benefits (สิ่งที่คุณจะได้รับ) */}
-              <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#EFE8E1] space-y-2.5">
+              {/* Row 11: Key Benefits (สิ่งที่คุณจะได้รับ - TH & EN) */}
+              <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#EFE8E1] space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="block text-[11px] font-bold text-[#1E1E1E] flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-[#E84D84]" />
                     <span>สิ่งที่คุณจะได้รับ (Key Benefits)</span>
                   </label>
-                  <span className="text-[10px] text-[#888]">แสดงเป็นเช็กลิสต์ในหน้ารายละเอียด</span>
+                  <span className="text-[10px] text-[#888]">รองรับ 2 ภาษา (TH & EN)</span>
                 </div>
 
-                {/* Current Benefits List */}
-                <div className="space-y-1.5 p-2 bg-white rounded-xl border border-[#E5DFD7]">
-                  {(formData.benefits || []).length === 0 ? (
-                    <span className="text-[11px] text-[#999] italic py-0.5 block">ยังไม่มีรายการสิ่งที่จะได้รับ กรุณาพิมพ์เพิ่มด้านล่าง</span>
-                  ) : (
-                    formData.benefits?.map((benefit, idx) => (
-                      <div 
-                        key={idx} 
-                        className="flex items-center justify-between gap-2 px-2.5 py-1.5 bg-[#FAF8F5] rounded-lg border border-[#EFE8E1] text-xs text-[#333]"
-                      >
-                        <div className="flex items-center gap-2 truncate">
-                          <Check className="w-3.5 h-3.5 text-[#E84D84] flex-shrink-0" />
-                          <span className="truncate">{benefit}</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveBenefit(idx)}
-                          className="text-[#999] hover:text-rose-600 p-0.5 cursor-pointer flex-shrink-0"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+                  {/* Thai Benefits */}
+                  <div className="space-y-2 p-3 bg-white rounded-xl border border-[#E5DFD7]">
+                    <span className="text-[11px] font-bold text-[#A82B5A] block">🇹🇭 ภาษาไทย (Thai)</span>
+                    <div className="space-y-1 p-2 bg-[#FAF8F5] rounded-lg border border-[#EFE8E1] max-h-40 overflow-y-auto">
+                      {(formData.benefits || []).length === 0 ? (
+                        <span className="text-[10px] text-[#999] italic py-0.5 block">ยังไม่มีรายการภาษาไทย</span>
+                      ) : (
+                        formData.benefits?.map((benefit, idx) => (
+                          <div 
+                            key={idx} 
+                            className="flex items-center justify-between gap-2 px-2 py-1 bg-white rounded border border-[#EFE8E1] text-xs text-[#333]"
+                          >
+                            <div className="flex items-center gap-1.5 truncate">
+                              <Check className="w-3.5 h-3.5 text-[#E84D84] flex-shrink-0" />
+                              <span className="truncate text-[11px]">{benefit}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveBenefit(idx)}
+                              className="text-[#999] hover:text-rose-600 p-0.5 cursor-pointer flex-shrink-0"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
 
-                {/* Add new benefit input */}
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newBenefitInput}
-                    onChange={(e) => setNewBenefitInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddBenefit(newBenefitInput);
-                      }
-                    }}
-                    placeholder="พิมพ์ผลลัพธ์ที่จะได้รับ เช่น คืนสมดุลให้ร่างกายและจิตใจ แล้วกด Enter"
-                    className="flex-1 px-3 py-2 bg-white rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleAddBenefit(newBenefitInput)}
-                    className="px-3.5 py-2 bg-[#E84D84] text-white font-bold rounded-xl text-xs flex items-center gap-1 cursor-pointer hover:bg-[#D43D73] transition-colors flex-shrink-0"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>เพิ่ม</span>
-                  </button>
-                </div>
-
-                {/* Quick Add Benefit Suggestions */}
-                <div className="pt-1">
-                  <span className="text-[10px] text-[#777] block mb-1">ตัวเลือกแนะนำ (คลิกเพื่อเพิ่มด่วน):</span>
-                  <div className="flex flex-wrap gap-1">
-                    {POPULAR_BENEFITS.map((suggested, idx) => (
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        value={newBenefitInput}
+                        onChange={(e) => setNewBenefitInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddBenefit(newBenefitInput);
+                          }
+                        }}
+                        placeholder="พิมพ์ผลลัพธ์ (TH) แล้วกด Enter"
+                        className="flex-1 px-2.5 py-1.5 bg-white rounded-lg border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
+                      />
                       <button
-                        key={idx}
                         type="button"
-                        onClick={() => handleAddBenefit(suggested)}
-                        className="px-2 py-0.5 bg-[#FAF7F5] hover:bg-[#FCE3EB] hover:text-[#A82B5A] border border-[#E5DFD7] hover:border-[#F8DDE5] rounded-md text-[10px] text-[#666] transition-colors cursor-pointer"
+                        onClick={() => handleAddBenefit(newBenefitInput)}
+                        className="px-3 py-1.5 bg-[#E84D84] text-white font-bold rounded-lg text-xs flex items-center gap-1 cursor-pointer hover:bg-[#D43D73] transition-colors flex-shrink-0"
                       >
-                        + {suggested}
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>เพิ่ม</span>
                       </button>
-                    ))}
+                    </div>
+
+                    <div className="pt-0.5">
+                      <span className="text-[9px] text-[#888] block mb-1">แนะนำด่วน:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {POPULAR_BENEFITS.slice(0, 4).map((suggested, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleAddBenefit(suggested)}
+                            className="px-1.5 py-0.5 bg-[#FAF7F5] hover:bg-[#FCE3EB] hover:text-[#A82B5A] border border-[#E5DFD7] rounded text-[9px] text-[#666] transition-colors cursor-pointer"
+                          >
+                            + {suggested}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* English Benefits */}
+                  <div className="space-y-2 p-3 bg-white rounded-xl border border-[#E5DFD7]">
+                    <span className="text-[11px] font-bold text-[#E84D84] block">🇬🇧 English</span>
+                    <div className="space-y-1 p-2 bg-[#FAF8F5] rounded-lg border border-[#EFE8E1] max-h-40 overflow-y-auto">
+                      {(formData.benefitsEn || []).length === 0 ? (
+                        <span className="text-[10px] text-[#999] italic py-0.5 block">No English benefits yet</span>
+                      ) : (
+                        formData.benefitsEn?.map((benefit, idx) => (
+                          <div 
+                            key={idx} 
+                            className="flex items-center justify-between gap-2 px-2 py-1 bg-white rounded border border-[#EFE8E1] text-xs text-[#333]"
+                          >
+                            <div className="flex items-center gap-1.5 truncate">
+                              <Check className="w-3.5 h-3.5 text-[#E84D84] flex-shrink-0" />
+                              <span className="truncate text-[11px]">{benefit}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveBenefitEn(idx)}
+                              className="text-[#999] hover:text-rose-600 p-0.5 cursor-pointer flex-shrink-0"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        value={newBenefitEnInput}
+                        onChange={(e) => setNewBenefitEnInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddBenefitEn(newBenefitEnInput);
+                          }
+                        }}
+                        placeholder="Type benefit (EN) e.g. Restore harmony"
+                        className="flex-1 px-2.5 py-1.5 bg-white rounded-lg border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAddBenefitEn(newBenefitEnInput)}
+                        className="px-3 py-1.5 bg-[#E84D84] text-white font-bold rounded-lg text-xs flex items-center gap-1 cursor-pointer hover:bg-[#D43D73] transition-colors flex-shrink-0"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add</span>
+                      </button>
+                    </div>
+
+                    <div className="pt-0.5">
+                      <span className="text-[9px] text-[#888] block mb-1">Quick suggestions:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {POPULAR_BENEFITS_EN.slice(0, 4).map((suggested, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleAddBenefitEn(suggested)}
+                            className="px-1.5 py-0.5 bg-[#FAF7F5] hover:bg-[#FCE3EB] hover:text-[#A82B5A] border border-[#E5DFD7] rounded text-[9px] text-[#666] transition-colors cursor-pointer"
+                          >
+                            + {suggested}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Row 12: Preparation Tips (คำแนะนำการเตรียมตัว) */}
-              <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#EFE8E1] space-y-2.5">
+              {/* Row 12: Preparation Tips (คำแนะนำการเตรียมตัว - TH & EN) */}
+              <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#EFE8E1] space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="block text-[11px] font-bold text-[#1E1E1E] flex items-center gap-1.5">
                     <Heart className="w-3.5 h-3.5 text-[#E84D84]" />
                     <span>คำแนะนำการเตรียมตัว (Preparation Tips - Optional)</span>
                   </label>
-                  <span className="text-[10px] text-[#888]">คำแนะนำสำหรับผู้เข้าร่วมกิจกรรม</span>
+                  <span className="text-[10px] text-[#888]">รองรับ 2 ภาษา (TH & EN)</span>
                 </div>
 
-                <div className="flex flex-wrap gap-1.5 min-h-[30px] p-2 bg-white rounded-xl border border-[#E5DFD7]">
-                  {(formData.preparationTips || []).length === 0 ? (
-                    <span className="text-[11px] text-[#999] italic py-0.5">ยังไม่มีคำแนะนำการเตรียมตัว</span>
-                  ) : (
-                    formData.preparationTips?.map((tip, idx) => (
-                      <span 
-                        key={idx} 
-                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#FAF7F5] text-[#555] border border-[#E5DFD7] rounded-full text-xs"
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+                  {/* Thai Prep Tips */}
+                  <div className="space-y-2 p-3 bg-white rounded-xl border border-[#E5DFD7]">
+                    <span className="text-[11px] font-bold text-[#A82B5A] block">🇹🇭 ภาษาไทย (Thai)</span>
+                    <div className="flex flex-wrap gap-1.5 min-h-[30px] p-2 bg-[#FAF8F5] rounded-lg border border-[#EFE8E1]">
+                      {(formData.preparationTips || []).length === 0 ? (
+                        <span className="text-[10px] text-[#999] italic py-0.5">ยังไม่มีคำแนะนำภาษาไทย</span>
+                      ) : (
+                        formData.preparationTips?.map((tip, idx) => (
+                          <span 
+                            key={idx} 
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-[#FAF7F5] text-[#555] border border-[#E5DFD7] rounded-full text-xs"
+                          >
+                            <span>{tip}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemovePrepTip(idx)}
+                              className="hover:text-rose-700 rounded-full p-0.5 cursor-pointer"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        value={newPrepTipInput}
+                        onChange={(e) => setNewPrepTipInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddPrepTip(newPrepTipInput);
+                          }
+                        }}
+                        placeholder="เช่น สวมใส่ชุดหลวมสบาย ไม่รัดแน่น"
+                        className="flex-1 px-2.5 py-1.5 bg-white rounded-lg border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAddPrepTip(newPrepTipInput)}
+                        className="px-3 py-1.5 bg-[#FAF0F3] hover:bg-[#FCE3EB] text-[#E84D84] border border-[#F8DDE5] font-bold rounded-lg text-xs flex items-center gap-1 cursor-pointer transition-colors flex-shrink-0"
                       >
-                        <span>{tip}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemovePrepTip(idx)}
-                          className="hover:text-rose-700 rounded-full p-0.5 cursor-pointer"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))
-                  )}
-                </div>
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>เพิ่ม</span>
+                      </button>
+                    </div>
 
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newPrepTipInput}
-                    onChange={(e) => setNewPrepTipInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddPrepTip(newPrepTipInput);
-                      }
-                    }}
-                    placeholder="เช่น สวมใส่ชุดหลวมสบาย ไม่รัดแน่น"
-                    className="flex-1 px-3 py-2 bg-white rounded-xl border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleAddPrepTip(newPrepTipInput)}
-                    className="px-3.5 py-2 bg-[#FAF0F3] hover:bg-[#FCE3EB] text-[#E84D84] border border-[#F8DDE5] font-bold rounded-xl text-xs flex items-center gap-1 cursor-pointer transition-colors flex-shrink-0"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>เพิ่ม</span>
-                  </button>
+                    <div className="pt-0.5">
+                      <span className="text-[9px] text-[#888] block mb-1">แนะนำด่วน:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {POPULAR_PREP_TIPS.map((suggested, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleAddPrepTip(suggested)}
+                            className="px-1.5 py-0.5 bg-[#FAF7F5] hover:bg-[#FCE3EB] hover:text-[#A82B5A] border border-[#E5DFD7] rounded text-[9px] text-[#666] transition-colors cursor-pointer"
+                          >
+                            + {suggested}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* English Prep Tips */}
+                  <div className="space-y-2 p-3 bg-white rounded-xl border border-[#E5DFD7]">
+                    <span className="text-[11px] font-bold text-[#E84D84] block">🇬🇧 English</span>
+                    <div className="flex flex-wrap gap-1.5 min-h-[30px] p-2 bg-[#FAF8F5] rounded-lg border border-[#EFE8E1]">
+                      {(formData.preparationTipsEn || []).length === 0 ? (
+                        <span className="text-[10px] text-[#999] italic py-0.5">No English tips yet</span>
+                      ) : (
+                        formData.preparationTipsEn?.map((tip, idx) => (
+                          <span 
+                            key={idx} 
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-[#FAF7F5] text-[#555] border border-[#E5DFD7] rounded-full text-xs"
+                          >
+                            <span>{tip}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemovePrepTipEn(idx)}
+                              className="hover:text-rose-700 rounded-full p-0.5 cursor-pointer"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        value={newPrepTipEnInput}
+                        onChange={(e) => setNewPrepTipEnInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddPrepTipEn(newPrepTipEnInput);
+                          }
+                        }}
+                        placeholder="e.g. Wear comfortable, loose-fitting clothes"
+                        className="flex-1 px-2.5 py-1.5 bg-white rounded-lg border border-[#E5DFD7] text-xs focus:outline-none focus:border-[#E84D84]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAddPrepTipEn(newPrepTipEnInput)}
+                        className="px-3 py-1.5 bg-[#FAF0F3] hover:bg-[#FCE3EB] text-[#E84D84] border border-[#F8DDE5] font-bold rounded-lg text-xs flex items-center gap-1 cursor-pointer transition-colors flex-shrink-0"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add</span>
+                      </button>
+                    </div>
+
+                    <div className="pt-0.5">
+                      <span className="text-[9px] text-[#888] block mb-1">Quick suggestions:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {POPULAR_PREP_TIPS_EN.map((suggested, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleAddPrepTipEn(suggested)}
+                            className="px-1.5 py-0.5 bg-[#FAF7F5] hover:bg-[#FCE3EB] hover:text-[#A82B5A] border border-[#E5DFD7] rounded text-[9px] text-[#666] transition-colors cursor-pointer"
+                          >
+                            + {suggested}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 

@@ -21,6 +21,7 @@ export interface ScheduleEvent {
   name: string; // e.g. "เขียน ปล่อย ใจ Sound Bath"
   englishName?: string;
   subtitle?: string;
+  subtitleEn?: string;
   category: OfferingCategory;
   branch: BranchLocation;
   locationDetails: string;
@@ -39,9 +40,13 @@ export interface ScheduleEvent {
   bookedCount: number;
   level: string;
   sensoryNotes: string[];
+  sensoryNotesEn?: string[];
   description: string;
+  descriptionEn?: string;
   benefits: string[];
+  benefitsEn?: string[];
   preparationTips: string[];
+  preparationTipsEn?: string[];
   posterUrl?: string; // High-res poster banner URL for the modal
   posterTag?: string; // Optional aesthetic tag on poster
   isSpecialStar?: boolean; // Star icon on calendar date

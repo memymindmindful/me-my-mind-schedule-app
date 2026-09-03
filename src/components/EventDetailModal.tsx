@@ -256,16 +256,20 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
         </div>
 
         {/* Modal Sub-Header (Subtitle & Event ID) */}
-        {event.subtitle && (
-          <div className="px-5 py-2.5 bg-[#FAF7F5] border-b border-[#F2ECE6] flex items-center justify-between text-xs">
-            <p className="text-[#555] font-medium truncate pr-2">
-              {event.subtitle}
-            </p>
-            <span className="text-[10px] text-[#999] font-mono whitespace-nowrap">
-              {event.dateDisplay}
-            </span>
-          </div>
-        )}
+        {(() => {
+          const displaySubtitle = lang === 'en' ? (event.subtitleEn || event.subtitle) : event.subtitle;
+          if (!displaySubtitle) return null;
+          return (
+            <div className="px-5 py-2.5 bg-[#FAF7F5] border-b border-[#F2ECE6] flex items-center justify-between text-xs">
+              <p className="text-[#555] font-medium truncate pr-2">
+                {displaySubtitle}
+              </p>
+              <span className="text-[10px] text-[#999] font-mono whitespace-nowrap">
+                {event.dateDisplay}
+              </span>
+            </div>
+          );
+        })()}
 
         {/* Scrollable Body Content */}
         <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1 text-sm font-sans text-[#2B2B2B]">
@@ -359,8 +363,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                 <h4 className="text-xs font-bold uppercase tracking-wider text-[#888]">
                   {t.aboutRitual}
                 </h4>
-                <p className="text-[13px] text-[#444] leading-relaxed">
-                  {event.description}
+                <p className="text-[13px] text-[#444] leading-relaxed whitespace-pre-line">
+                  {lang === 'en' ? (event.descriptionEn || event.description) : event.description}
                 </p>
               </div>
 
@@ -393,60 +397,72 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
               </div>
 
               {/* Sensory elements & tools */}
-              {event.sensoryNotes && event.sensoryNotes.length > 0 && (
-                <div className="space-y-1.5">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#888] flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-[#E84D84]" />
-                    <span>{t.sensoryNotes}</span>
-                  </h4>
-                  <div className="flex flex-wrap gap-1.5">
-                    {event.sensoryNotes.map((note, idx) => (
-                      <span 
-                        key={idx}
-                        className="px-2.5 py-1 rounded-lg text-[11px] bg-[#FAF0F3] text-[#A6355C] border border-[#F8DDE5] font-medium"
-                      >
-                        • {note}
-                      </span>
-                    ))}
+              {(() => {
+                const notes = (lang === 'en' ? (event.sensoryNotesEn?.length ? event.sensoryNotesEn : event.sensoryNotes) : event.sensoryNotes) || [];
+                if (notes.length === 0) return null;
+                return (
+                  <div className="space-y-1.5">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#888] flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-[#E84D84]" />
+                      <span>{t.sensoryNotes}</span>
+                    </h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {notes.map((note, idx) => (
+                        <span 
+                          key={idx}
+                          className="px-2.5 py-1 rounded-lg text-[11px] bg-[#FAF0F3] text-[#A6355C] border border-[#F8DDE5] font-medium"
+                        >
+                          • {note}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Benefits */}
-              {event.benefits && event.benefits.length > 0 && (
-                <div className="space-y-1.5">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#888] flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[#E84D84]" />
-                    <span>{t.keyBenefits}</span>
-                  </h4>
-                  <ul className="space-y-1 text-xs text-[#444]">
-                    {event.benefits.map((b, idx) => (
-                      <li key={idx} className="flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-[#E84D84] flex-shrink-0" />
-                        <span>{b}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {(() => {
+                const currentBenefits = (lang === 'en' ? (event.benefitsEn?.length ? event.benefitsEn : event.benefits) : event.benefits) || [];
+                if (currentBenefits.length === 0) return null;
+                return (
+                  <div className="space-y-1.5">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#888] flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#E84D84]" />
+                      <span>{t.keyBenefits}</span>
+                    </h4>
+                    <ul className="space-y-1 text-xs text-[#444]">
+                      {currentBenefits.map((b, idx) => (
+                        <li key={idx} className="flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#E84D84] flex-shrink-0" />
+                          <span>{b}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })()}
 
               {/* Preparation Tips */}
-              {event.preparationTips && event.preparationTips.length > 0 && (
-                <div className="space-y-1.5">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#888] flex items-center gap-1.5">
-                    <Heart className="w-3.5 h-3.5 text-[#E84D84]" />
-                    <span>{lang === 'th' ? 'ข้อแนะนำการเตรียมตัว' : 'Preparation Tips'}</span>
-                  </h4>
-                  <ul className="space-y-1 text-xs text-[#555]">
-                    {event.preparationTips.map((tip, idx) => (
-                      <li key={idx} className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#E84D84] flex-shrink-0" />
-                        <span>{tip}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {(() => {
+                const currentTips = (lang === 'en' ? (event.preparationTipsEn?.length ? event.preparationTipsEn : event.preparationTips) : event.preparationTips) || [];
+                if (currentTips.length === 0) return null;
+                return (
+                  <div className="space-y-1.5">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#888] flex items-center gap-1.5">
+                      <Heart className="w-3.5 h-3.5 text-[#E84D84]" />
+                      <span>{lang === 'th' ? 'ข้อแนะนำการเตรียมตัว' : 'Preparation Tips'}</span>
+                    </h4>
+                    <ul className="space-y-1 text-xs text-[#555]">
+                      {currentTips.map((tip, idx) => (
+                        <li key={idx} className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#E84D84] flex-shrink-0" />
+                          <span>{tip}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })()}
             </>
           )}
         </div>

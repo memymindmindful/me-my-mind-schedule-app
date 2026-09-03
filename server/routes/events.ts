@@ -12,6 +12,17 @@ eventsRouter.use((_req: Request, res: Response, next) => {
 });
 
 // Helper to convert database row to ScheduleEvent object
+function parseJsonArray(val: any): string[] {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  try {
+    const parsed = JSON.parse(val);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 export function mapRowToEvent(columns: string[], row: any[]) {
   const obj: Record<string, any> = {};
   columns.forEach((col, idx) => {
@@ -38,10 +49,12 @@ export function mapRowToEvent(columns: string[], row: any[]) {
     isFree: Boolean(obj.isFree || (obj.priceThb === 0 && obj.isFree !== 0)),
     level: obj.level || 'All Levels',
     description: obj.description || '',
+    descriptionEn: obj.descriptionEn || '',
     locationDetails: obj.locationDetails || '',
     posterUrl: obj.posterUrl || '',
     posterTag: obj.posterTag || '',
     subtitle: obj.subtitle || '',
+    subtitleEn: obj.subtitleEn || '',
     useGlobalFacilitator: obj.useGlobalFacilitator !== undefined ? (obj.useGlobalFacilitator === 1 || obj.useGlobalFacilitator === '1' || obj.useGlobalFacilitator === true) : true,
     facilitatorId: obj.facilitatorId !== undefined && obj.facilitatorId !== '' ? obj.facilitatorId : (obj.useGlobalFacilitator !== false ? 'default' : null),
     facilitator: {
@@ -49,9 +62,12 @@ export function mapRowToEvent(columns: string[], row: any[]) {
       role: obj.facilitatorRole || 'Founder & Lead Somatic Alchemist',
       bio: obj.facilitatorBio || 'Certified Sound Healing Practitioner and Holistic Facial Ritualist.'
     },
-    sensoryNotes: obj.sensoryNotes ? JSON.parse(obj.sensoryNotes) : [],
-    benefits: obj.benefits ? JSON.parse(obj.benefits) : [],
-    preparationTips: obj.preparationTips ? JSON.parse(obj.preparationTips) : [],
+    sensoryNotes: parseJsonArray(obj.sensoryNotes),
+    sensoryNotesEn: parseJsonArray(obj.sensoryNotesEn),
+    benefits: parseJsonArray(obj.benefits),
+    benefitsEn: parseJsonArray(obj.benefitsEn),
+    preparationTips: parseJsonArray(obj.preparationTips),
+    preparationTipsEn: parseJsonArray(obj.preparationTipsEn),
     adminNote: obj.adminNote || '',
     isSpecialStar: Boolean(obj.isSpecialStar),
     isFeatured: Boolean(obj.isFeatured),

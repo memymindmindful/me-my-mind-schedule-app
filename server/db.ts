@@ -80,17 +80,22 @@ export async function initDatabase(): Promise<Database> {
       isFree INTEGER DEFAULT 0,
       level TEXT DEFAULT 'All Levels',
       description TEXT,
+      descriptionEn TEXT,
       locationDetails TEXT,
       posterUrl TEXT,
       posterTag TEXT,
       subtitle TEXT,
+      subtitleEn TEXT,
       facilitatorName TEXT,
       facilitatorRole TEXT,
       facilitatorBio TEXT,
       useGlobalFacilitator INTEGER DEFAULT 1,
       sensoryNotes TEXT,
+      sensoryNotesEn TEXT,
       benefits TEXT,
+      benefitsEn TEXT,
       preparationTips TEXT,
+      preparationTipsEn TEXT,
       adminNote TEXT,
       isSpecialStar INTEGER DEFAULT 0,
       isFeatured INTEGER DEFAULT 0,
@@ -98,6 +103,13 @@ export async function initDatabase(): Promise<Database> {
       updatedAt TEXT DEFAULT (datetime('now'))
     );
   `);
+
+  // Safe migrations for English fields on events
+  try { db.run("ALTER TABLE events ADD COLUMN subtitleEn TEXT"); } catch {}
+  try { db.run("ALTER TABLE events ADD COLUMN descriptionEn TEXT"); } catch {}
+  try { db.run("ALTER TABLE events ADD COLUMN sensoryNotesEn TEXT"); } catch {}
+  try { db.run("ALTER TABLE events ADD COLUMN benefitsEn TEXT"); } catch {}
+  try { db.run("ALTER TABLE events ADD COLUMN preparationTipsEn TEXT"); } catch {}
 
   // Safe migration for isFree column
   try {

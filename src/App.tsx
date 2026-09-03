@@ -284,12 +284,20 @@ export default function App() {
       // 2. Search query match
       if (searchQuery.trim() !== '') {
         const q = searchQuery.toLowerCase();
-        const matchTitle = evt.title?.toLowerCase?.() || evt.name?.toLowerCase?.() || '';
-        const matchDesc = evt.description?.toLowerCase?.() || '';
+        const matchTitle = (evt as any).title?.toLowerCase?.() || evt.name?.toLowerCase?.() || evt.englishName?.toLowerCase?.() || '';
+        const matchSubtitle = evt.subtitle?.toLowerCase?.() || evt.subtitleEn?.toLowerCase?.() || '';
+        const matchDesc = evt.description?.toLowerCase?.() || evt.descriptionEn?.toLowerCase?.() || '';
         const matchLocation = evt.locationDetails?.toLowerCase?.() || '';
         const matchInstructor = evt.facilitator?.name?.toLowerCase?.() || '';
         const matchCategory = evt.category?.toLowerCase?.() || '';
-        if (!matchTitle.includes(q) && !matchDesc.includes(q) && !matchLocation.includes(q) && !matchInstructor.includes(q) && !matchCategory.includes(q)) {
+        if (
+          !matchTitle.includes(q) &&
+          !matchSubtitle.includes(q) &&
+          !matchDesc.includes(q) &&
+          !matchLocation.includes(q) &&
+          !matchInstructor.includes(q) &&
+          !matchCategory.includes(q)
+        ) {
           return false;
         }
       }

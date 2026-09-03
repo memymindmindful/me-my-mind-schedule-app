@@ -179,10 +179,12 @@ adminRouter.post('/admin/events', authenticateToken, upload.single('photo'), (re
     const priceThb = isFree ? 0 : (parseInt(body.priceThb, 10) || 0);
     const level = body.level || 'All Levels';
     const description = body.description || '';
+    const descriptionEn = body.descriptionEn || '';
     const locationDetails = body.locationDetails || '';
     const posterUrl = file ? `/uploads/${file.filename}` : (body.posterUrl || '');
     const posterTag = body.posterTag || '';
     const subtitle = body.subtitle || '';
+    const subtitleEn = body.subtitleEn || '';
     
     // Facilitator info
     let facilitatorObj: any = null;
@@ -202,8 +204,11 @@ adminRouter.post('/admin/events', authenticateToken, upload.single('photo'), (re
 
     // Array fields
     const sensoryNotes = typeof body.sensoryNotes === 'string' ? body.sensoryNotes : JSON.stringify(body.sensoryNotes || []);
+    const sensoryNotesEn = typeof body.sensoryNotesEn === 'string' ? body.sensoryNotesEn : JSON.stringify(body.sensoryNotesEn || []);
     const benefits = typeof body.benefits === 'string' ? body.benefits : JSON.stringify(body.benefits || []);
+    const benefitsEn = typeof body.benefitsEn === 'string' ? body.benefitsEn : JSON.stringify(body.benefitsEn || []);
     const preparationTips = typeof body.preparationTips === 'string' ? body.preparationTips : JSON.stringify(body.preparationTips || []);
+    const preparationTipsEn = typeof body.preparationTipsEn === 'string' ? body.preparationTipsEn : JSON.stringify(body.preparationTipsEn || []);
     const adminNote = body.adminNote || '';
     const isSpecialStar = body.isSpecialStar === 'true' || body.isSpecialStar === true ? 1 : 0;
     const isFeatured = body.isFeatured === 'true' || body.isFeatured === true ? 1 : 0;
@@ -212,9 +217,9 @@ adminRouter.post('/admin/events', authenticateToken, upload.single('photo'), (re
       id, name, englishName, date, dateDisplay, dateStr,
       startTime, endTime, timeDisplay, durationMinutes, category,
       branch, capacity, bookedCount, status, priceThb, isFree, level,
-      description, locationDetails, posterUrl, posterTag, subtitle,
+      description, descriptionEn, locationDetails, posterUrl, posterTag, subtitle, subtitleEn,
       facilitatorName, facilitatorRole, facilitatorBio, useGlobalFacilitator, facilitatorId,
-      sensoryNotes, benefits, preparationTips, adminNote,
+      sensoryNotes, sensoryNotesEn, benefits, benefitsEn, preparationTips, preparationTipsEn, adminNote,
       isSpecialStar, isFeatured
     ];
     const params = rawParams.map(v => (v === undefined ? null : v));
@@ -224,11 +229,11 @@ adminRouter.post('/admin/events', authenticateToken, upload.single('photo'), (re
         id, name, englishName, date, dateDisplay, dateStr,
         startTime, endTime, timeDisplay, durationMinutes, category,
         branch, capacity, bookedCount, status, priceThb, isFree, level,
-        description, locationDetails, posterUrl, posterTag, subtitle,
+        description, descriptionEn, locationDetails, posterUrl, posterTag, subtitle, subtitleEn,
         facilitatorName, facilitatorRole, facilitatorBio, useGlobalFacilitator, facilitatorId,
-        sensoryNotes, benefits, preparationTips, adminNote,
+        sensoryNotes, sensoryNotesEn, benefits, benefitsEn, preparationTips, preparationTipsEn, adminNote,
         isSpecialStar, isFeatured, createdAt, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     `, params);
 
     saveDatabase();
@@ -309,9 +314,14 @@ adminRouter.put('/admin/events/:id', authenticateToken, upload.single('photo'), 
     const facilitatorRole = body.facilitatorRole !== undefined ? body.facilitatorRole : (facilitatorObj?.role !== undefined ? facilitatorObj.role : null);
     const facilitatorBio = body.facilitatorBio !== undefined ? body.facilitatorBio : (facilitatorObj?.bio !== undefined ? facilitatorObj.bio : null);
     const useGlobalFacilitator = body.useGlobalFacilitator !== undefined ? (body.useGlobalFacilitator === 'true' || body.useGlobalFacilitator === true || body.useGlobalFacilitator === 1 ? 1 : 0) : null;
+    const subtitleEn = body.subtitleEn !== undefined ? body.subtitleEn : null;
+    const descriptionEn = body.descriptionEn !== undefined ? body.descriptionEn : null;
     const sensoryNotes = body.sensoryNotes !== undefined ? (typeof body.sensoryNotes === 'string' ? body.sensoryNotes : JSON.stringify(body.sensoryNotes)) : null;
+    const sensoryNotesEn = body.sensoryNotesEn !== undefined ? (typeof body.sensoryNotesEn === 'string' ? body.sensoryNotesEn : JSON.stringify(body.sensoryNotesEn)) : null;
     const benefits = body.benefits !== undefined ? (typeof body.benefits === 'string' ? body.benefits : JSON.stringify(body.benefits)) : null;
+    const benefitsEn = body.benefitsEn !== undefined ? (typeof body.benefitsEn === 'string' ? body.benefitsEn : JSON.stringify(body.benefitsEn)) : null;
     const preparationTips = body.preparationTips !== undefined ? (typeof body.preparationTips === 'string' ? body.preparationTips : JSON.stringify(body.preparationTips)) : null;
+    const preparationTipsEn = body.preparationTipsEn !== undefined ? (typeof body.preparationTipsEn === 'string' ? body.preparationTipsEn : JSON.stringify(body.preparationTipsEn)) : null;
 
     const rawParams = [
       body.name,
@@ -334,18 +344,23 @@ adminRouter.put('/admin/events/:id', authenticateToken, upload.single('photo'), 
       body.isFree !== undefined ? (body.isFree === 'true' || body.isFree === true || body.isFree === 1 || Number(body.priceThb) === 0 ? 1 : 0) : null,
       body.level,
       body.description,
+      descriptionEn,
       body.locationDetails,
       posterUrl,
       body.posterTag,
       body.subtitle,
+      subtitleEn,
       facilitatorName,
       facilitatorRole,
       facilitatorBio,
       useGlobalFacilitator,
       facilitatorId,
       sensoryNotes,
+      sensoryNotesEn,
       benefits,
+      benefitsEn,
       preparationTips,
+      preparationTipsEn,
       body.adminNote,
       body.isSpecialStar !== undefined ? (body.isSpecialStar === 'true' || body.isSpecialStar === true ? 1 : 0) : null,
       body.isFeatured !== undefined ? (body.isFeatured === 'true' || body.isFeatured === true ? 1 : 0) : null,
@@ -373,18 +388,23 @@ adminRouter.put('/admin/events/:id', authenticateToken, upload.single('photo'), 
         isFree = COALESCE(?, isFree),
         level = COALESCE(?, level),
         description = COALESCE(?, description),
+        descriptionEn = COALESCE(?, descriptionEn),
         locationDetails = COALESCE(?, locationDetails),
         posterUrl = ?,
         posterTag = COALESCE(?, posterTag),
         subtitle = COALESCE(?, subtitle),
+        subtitleEn = COALESCE(?, subtitleEn),
         facilitatorName = COALESCE(?, facilitatorName),
         facilitatorRole = COALESCE(?, facilitatorRole),
         facilitatorBio = COALESCE(?, facilitatorBio),
         useGlobalFacilitator = COALESCE(?, useGlobalFacilitator),
         facilitatorId = ?,
         sensoryNotes = COALESCE(?, sensoryNotes),
+        sensoryNotesEn = COALESCE(?, sensoryNotesEn),
         benefits = COALESCE(?, benefits),
+        benefitsEn = COALESCE(?, benefitsEn),
         preparationTips = COALESCE(?, preparationTips),
+        preparationTipsEn = COALESCE(?, preparationTipsEn),
         adminNote = COALESCE(?, adminNote),
         isSpecialStar = COALESCE(?, isSpecialStar),
         isFeatured = COALESCE(?, isFeatured),
