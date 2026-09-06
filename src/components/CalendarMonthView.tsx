@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Check, Video } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, Video, User } from 'lucide-react';
 import { BranchLocation, ScheduleEvent, DayCalendarInfo, DayBarConfig } from '../types';
 import { getDefaultMonthBars } from '../utils/adminStorage';
 import { Language, TRANSLATIONS } from '../utils/translations';
@@ -72,12 +72,9 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
     // Default branch is Nakhonsawan unless specified otherwise
     const branch: BranchLocation = dayBar?.branch || dayEvents[0]?.branch || 'Nakhonsawan';
 
-    // Fully booked condition: manual day override OR (has events and all events are full)
-    const dayBarFullyBooked = dayBar?.specialStatus?.type === 'fully_booked';
-    const allEventsFullyBooked = dayEvents.length > 0 && dayEvents.every(
-      e => e.status === 'fully_booked' || (e.capacity > 0 && e.bookedCount >= e.capacity)
-    );
-    const isDayFullyBooked = dayBarFullyBooked || allEventsFullyBooked;
+    // Fully booked condition: ONLY reflects the admin's explicit day-level "Fully Booked" status —
+    // never inferred from individual event booking counts.
+    const isDayFullyBooked = dayBar?.specialStatus?.type === 'fully_booked';
 
     calendarDays.push({
       dayNum: d,
@@ -91,6 +88,7 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
       hasSpecialStar: !!dayBar?.hasSpecialStar || dayEvents.some(e => e.isSpecialStar),
       hasOnlineEvent: dayEvents.some(e => e.branch === 'Online'),
       hasFullyBooked: isDayFullyBooked,
+      hasPrivateBooking: !!dayBar?.hasPrivateBooking,
       isPinkPill: dayBar?.isPinkPill ?? (branch === 'Ratchathewi' && dayEvents.length > 0),
       isBrownPill: dayBar?.isBrownPill ?? (branch === 'On-Tour'),
       isSundayPink: isSunday,
@@ -383,8 +381,8 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
                 {day.dayNum}
               </span>
 
-              {/* Day Cell Badges (Special Event Star & Online Video Badge) */}
-              {(day.hasSpecialStar || day.hasOnlineEvent) && (
+              {/* Day Cell Badges (Special Event Star & Online Video Badge & Private Booking Badge) */}
+              {(day.hasSpecialStar || day.hasOnlineEvent || day.hasPrivateBooking) && (
                 <div className="absolute -top-1.5 -right-0.5 z-20 flex flex-col items-center gap-0.5 pointer-events-none">
                   {day.hasSpecialStar && (
                     <div 
@@ -429,11 +427,19 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
                       </div>
                     </div>
                   )}
+
+                  {day.hasPrivateBooking && (
+                    <div title={lang === 'th' ? 'มีจอง Private ในวันนี้' : 'Has a Private booking today'}>
+                      <div className="w-4 h-4 rounded-full bg-[#EC4899] flex items-center justify-center shadow-xs border border-white">
+                        <User className="w-2.5 h-2.5 text-white" strokeWidth={2.5} />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Multiple Events indicator dot if on non-pill day */}
-              {day.events.length > 0 && !day.hasSpecialStar && !day.hasOnlineEvent && !pillClass && (
+              {day.events.length > 0 && !day.hasSpecialStar && !day.hasOnlineEvent && !day.hasPrivateBooking && !pillClass && (
                 <span className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-[#E84D84]" />
               )}
 
@@ -473,6 +479,12 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
                           </span>
                         )}
                       </>
+                    )}
+                    {day.hasPrivateBooking && (
+                      <span className="bg-[#EC4899] text-white text-[9px] px-1.5 py-0.2 rounded-full font-medium flex items-center gap-0.5 flex-shrink-0 whitespace-nowrap">
+                        <User className="w-2.5 h-2.5" />
+                        <span>Private</span>
+                      </span>
                     )}
                   </div>
                   {/* Tooltip triangle indicator */}

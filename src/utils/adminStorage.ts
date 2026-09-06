@@ -303,6 +303,7 @@ export function getDefaultMonthBars(year: number, month: number): Record<number,
       isBrownPill: data.isBrownPill,
       pillPosition: pillPos,
       hasSpecialStar: data.hasSpecialStar,
+      hasPrivateBooking: data.hasPrivateBooking,
       specialStatus: data.specialStatus
     };
   });

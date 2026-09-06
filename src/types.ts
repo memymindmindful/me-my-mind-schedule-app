@@ -79,6 +79,7 @@ export interface DayCalendarInfo {
   hasSpecialStar: boolean;
   hasOnlineEvent?: boolean;
   hasFullyBooked?: boolean;
+  hasPrivateBooking?: boolean;
   isPinkPill?: boolean;
   isBrownPill?: boolean;
   isSundayPink?: boolean;
@@ -109,6 +110,7 @@ export interface DayBarConfig {
   pillPosition?: 'single' | 'start' | 'middle' | 'end'; // for connected appearance
   hasSpecialStar?: boolean;
   specialStatus?: SpecialStatusDetails;
+  hasPrivateBooking?: boolean;
 }
 
 export interface MonthBarConfig {

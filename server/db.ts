@@ -386,6 +386,7 @@ Kru Beever 🤍`;
       isBrownPill INTEGER DEFAULT 0,
       pillPosition TEXT,
       hasSpecialStar INTEGER DEFAULT 0,
+      hasPrivateBooking INTEGER DEFAULT 0,
       specialStatusType TEXT,
       specialStatusLabelTh TEXT,
       specialStatusLabelEn TEXT,
@@ -399,6 +400,11 @@ Kru Beever 🤍`;
 
   try {
     db.run("CREATE INDEX IF NOT EXISTS idx_month_bars_ym ON month_bars(year, month)");
+  } catch {}
+
+  // Safe migration for hasPrivateBooking column
+  try {
+    db.run("ALTER TABLE month_bars ADD COLUMN hasPrivateBooking INTEGER DEFAULT 0");
   } catch {}
 
   // Safe migration: repair existing special status labels to short text and clean sub-text

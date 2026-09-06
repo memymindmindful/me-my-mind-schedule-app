@@ -11,7 +11,8 @@ import {
   Calendar, 
   Layers, 
   Slash, 
-  Sparkle 
+  Sparkle,
+  User
 } from 'lucide-react';
 import { BranchLocation, DayBarConfig, SpecialStatusDetails } from '../../types';
 import { getDefaultMonthBars } from '../../utils/adminStorage';
@@ -44,6 +45,7 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
     'ratchathewi_pink' | 'nakhonsawan_normal' | 'ontour_brown' | 'closed' | 'big_cleaning' | 'fully_booked' | 'clear'
   >('ratchathewi_pink');
   const [batchTourCity, setBatchTourCity] = useState('เชียงใหม่');
+  const [markAsPrivateBooking, setMarkAsPrivateBooking] = useState(false);
 
   // Load bar settings on month change
   useEffect(() => {
@@ -107,6 +109,10 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
       const isSingle = start === end;
       const pos = isSingle ? 'single' : isStart ? 'start' : isEnd ? 'end' : 'middle';
 
+      const existing = newMap[d];
+      const prevPrivate = existing?.hasPrivateBooking;
+      const finalPrivate = markAsPrivateBooking ? true : prevPrivate;
+
       if (batchActionType === 'ratchathewi_pink') {
         newMap[d] = {
           dayNum: d,
@@ -114,6 +120,8 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
           isPinkPill: true,
           isBrownPill: false,
           pillPosition: pos,
+          hasPrivateBooking: finalPrivate,
+          hasSpecialStar: existing?.hasSpecialStar,
           specialStatus: undefined
         };
       } else if (batchActionType === 'ontour_brown') {
@@ -124,6 +132,8 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
           isPinkPill: false,
           isBrownPill: true,
           pillPosition: pos,
+          hasPrivateBooking: finalPrivate,
+          hasSpecialStar: existing?.hasSpecialStar,
           specialStatus: undefined
         };
       } else if (batchActionType === 'closed') {
@@ -132,6 +142,8 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
           branch: 'Nakhonsawan',
           isPinkPill: false,
           isBrownPill: false,
+          hasPrivateBooking: finalPrivate,
+          hasSpecialStar: existing?.hasSpecialStar,
           specialStatus: {
             type: 'closed',
             labelTh: 'ปิดร้าน',
@@ -148,6 +160,8 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
           branch: 'Nakhonsawan',
           isPinkPill: false,
           isBrownPill: false,
+          hasPrivateBooking: finalPrivate,
+          hasSpecialStar: existing?.hasSpecialStar,
           specialStatus: {
             type: 'big_cleaning',
             labelTh: 'Big Cleaning',
@@ -160,8 +174,9 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
         };
       } else if (batchActionType === 'fully_booked') {
         newMap[d] = {
-          ...newMap[d],
+          ...existing,
           dayNum: d,
+          hasPrivateBooking: finalPrivate,
           specialStatus: {
             type: 'fully_booked',
             labelTh: 'เต็มแล้ว',
@@ -178,6 +193,8 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
           branch: 'Nakhonsawan',
           isPinkPill: false,
           isBrownPill: false,
+          hasPrivateBooking: finalPrivate,
+          hasSpecialStar: existing?.hasSpecialStar,
           specialStatus: undefined
         };
       } else if (batchActionType === 'clear') {
@@ -187,6 +204,7 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
           isPinkPill: false,
           isBrownPill: false,
           hasSpecialStar: false,
+          hasPrivateBooking: false,
           specialStatus: undefined
         };
       }
@@ -314,9 +332,16 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
                     <span className={`text-xs font-bold ${cfg?.isPinkPill && !cfg?.isBrownPill ? 'text-[#1E1E1E]' : ''}`}>
                       {d}
                     </span>
-                    {cfg?.hasSpecialStar && (
-                      <span className="text-[#FDB827] text-[10px]">★</span>
-                    )}
+                    <div className="flex items-center gap-0.5">
+                      {cfg?.hasSpecialStar && (
+                        <span className="text-[#FDB827] text-[10px]">★</span>
+                      )}
+                      {cfg?.hasPrivateBooking && (
+                        <span className="w-3.5 h-3.5 rounded-full bg-[#EC4899] flex items-center justify-center text-white" title="มีจอง Private">
+                          <User className="w-2 h-2 text-white" strokeWidth={3} />
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <span className="text-[9px] font-medium leading-tight truncate max-w-full px-0.5 opacity-90">
@@ -348,6 +373,12 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
             <span className="flex items-center gap-1">
               <span className="w-3 h-3 rounded-full bg-white ring-2 ring-[#D92D4B] ring-offset-1 inline-block" />
               <span className="text-[#D92D4B] font-medium">Fully Booked (คิวเต็ม)</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 rounded-full bg-[#EC4899] flex items-center justify-center text-white">
+                <User className="w-2 h-2 text-white" strokeWidth={3} />
+              </span>
+              <span className="text-[#BE185D] font-medium">มีจอง Private</span>
             </span>
           </div>
         </div>
@@ -421,6 +452,19 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
                   />
                 </div>
               )}
+
+              <div className="flex items-center gap-2 p-2.5 bg-[#FDF2F8] rounded-xl border border-[#FBCFE8]">
+                <input
+                  type="checkbox"
+                  id="markPrivateBooking"
+                  checked={markAsPrivateBooking}
+                  onChange={(e) => setMarkAsPrivateBooking(e.target.checked)}
+                  className="w-4 h-4 accent-[#EC4899] cursor-pointer"
+                />
+                <label htmlFor="markPrivateBooking" className="text-xs font-medium text-[#831843] cursor-pointer flex items-center gap-1">
+                  <span>👤 ทำเครื่องหมายว่ามีจอง Private ในวันนี้ด้วย (ไม่ลบล้างสถานะอื่น)</span>
+                </label>
+              </div>
 
               <button
                 type="submit"
@@ -510,6 +554,23 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
                   checked={!!activeDayConfig.hasSpecialStar}
                   onChange={(e) => handleUpdateDayConfig({ hasSpecialStar: e.target.checked })}
                   className="w-4 h-4 accent-[#FDB827] cursor-pointer"
+                />
+              </div>
+
+              {/* Private Booking Toggle */}
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#FDF2F8] border border-[#FBCFE8]">
+                <div>
+                  <span className="font-semibold text-xs text-[#BE185D] flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-[#EC4899]" />
+                    <span>มีจอง Private ในวันนี้ (Private Booking)</span>
+                  </span>
+                  <span className="text-[10px] text-[#DB2777]">แสดงไอคอนรูปบุคคลสีชมพูสดใสบนปฏิทิน</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={!!activeDayConfig.hasPrivateBooking}
+                  onChange={(e) => handleUpdateDayConfig({ hasPrivateBooking: e.target.checked })}
+                  className="w-4 h-4 accent-[#EC4899] cursor-pointer"
                 />
               </div>
 

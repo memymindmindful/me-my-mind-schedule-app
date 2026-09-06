@@ -183,7 +183,7 @@ eventsRouter.get('/bars/:year/:month', (req: Request, res: Response) => {
 
     const db = getDatabase();
     // Query matching year and month
-    const result = db.exec("SELECT dayNum, branch, tourCity, isPinkPill, isBrownPill, pillPosition, hasSpecialStar, specialStatusType, specialStatusLabelTh, specialStatusLabelEn, specialStatusSubTh, specialStatusSubEn, specialStatusBadgeBg, specialStatusBadgeText FROM month_bars WHERE year = ? AND month = ? ORDER BY dayNum ASC", [year, month]);
+    const result = db.exec("SELECT dayNum, branch, tourCity, isPinkPill, isBrownPill, pillPosition, hasSpecialStar, specialStatusType, specialStatusLabelTh, specialStatusLabelEn, specialStatusSubTh, specialStatusSubEn, specialStatusBadgeBg, specialStatusBadgeText, hasPrivateBooking FROM month_bars WHERE year = ? AND month = ? ORDER BY dayNum ASC", [year, month]);
 
     const bars: Record<number, any> = {};
 
@@ -199,6 +199,7 @@ eventsRouter.get('/bars/:year/:month', (req: Request, res: Response) => {
           isBrownPill: Boolean(row[4]),
           pillPosition: row[5] || undefined,
           hasSpecialStar: Boolean(row[6]),
+          hasPrivateBooking: Boolean(row[14]),
           specialStatus: specialType ? {
             type: specialType,
             labelTh: row[8] || (specialType === 'closed' ? 'ปิดร้าน' : 'Big Cleaning'),

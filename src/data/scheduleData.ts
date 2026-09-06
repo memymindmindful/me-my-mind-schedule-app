@@ -400,6 +400,7 @@ export function getCalendarMapForMonth(year: number, month: number): Record<numb
   isBrownPill?: boolean;
   isSundayPink?: boolean;
   hasSpecialStar?: boolean;
+  hasPrivateBooking?: boolean;
   specialStatus?: SpecialStatusDetails;
   tourLocation?: string;
   eventIds: string[];
@@ -411,6 +412,7 @@ export function getCalendarMapForMonth(year: number, month: number): Record<numb
     isBrownPill?: boolean;
     isSundayPink?: boolean;
     hasSpecialStar?: boolean;
+    hasPrivateBooking?: boolean;
     specialStatus?: SpecialStatusDetails;
     tourLocation?: string;
     eventIds: string[];
@@ -480,6 +482,7 @@ export function getCalendarMapForMonth(year: number, month: number): Record<numb
       isBrownPill,
       isSundayPink: isSunday,
       hasSpecialStar,
+      hasPrivateBooking: false,
       specialStatus,
       tourLocation,
       eventIds: []

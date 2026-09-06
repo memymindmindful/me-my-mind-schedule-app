@@ -24,14 +24,9 @@ export const DontMissSection: React.FC<DontMissSectionProps> = ({
   const t = TRANSLATIONS[lang];
   const [currentPage, setCurrentPage] = useState(0);
 
-  // Filter & prioritize important events for Don't Miss:
-  // Sort with featured/special star first, then by date, and break ties by start time
+  // Sort by date chronologically, and break ties by start time (strict chronological order)
   const sortedEvents = React.useMemo(() => {
     return [...events].sort((a, b) => {
-      if (a.isSpecialStar && !b.isSpecialStar) return -1;
-      if (!a.isSpecialStar && b.isSpecialStar) return 1;
-      if (a.isFeatured && !b.isFeatured) return -1;
-      if (!a.isFeatured && b.isFeatured) return 1;
       const dateCompare = a.dateStr.localeCompare(b.dateStr);
       if (dateCompare !== 0) return dateCompare;
       return parseTimeToMinutes(a.startTime) - parseTimeToMinutes(b.startTime);
@@ -134,10 +129,18 @@ export const DontMissSection: React.FC<DontMissSectionProps> = ({
                 className="group flex items-center justify-between py-1 px-1.5 -mx-1.5 cursor-pointer hover:bg-black/[0.03] active:bg-black/[0.06] rounded-xl transition-all duration-150"
               >
                 {/* Event Name */}
-                <div className="flex-1 pr-3 min-w-0">
+                <div className="flex-1 pr-3 min-w-0 flex items-center gap-1.5">
                   <span className="text-[13.5px] sm:text-[14px] font-normal text-[#222] tracking-tight group-hover:text-[#E84D84] transition-colors line-clamp-1">
                     {displayName}
                   </span>
+                  {(event.isSpecialStar || event.isFeatured) && (
+                    <span 
+                      className="text-[#FDB827] text-xs flex-shrink-0" 
+                      title={lang === 'th' ? 'กิจกรรมไฮไลท์ประจำเดือน' : 'Special Featured Event'}
+                    >
+                      ★
+                    </span>
+                  )}
                 </div>
 
                 {/* Date & Time Columns aligned under the icons */}

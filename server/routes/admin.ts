@@ -1302,6 +1302,7 @@ adminRouter.post('/admin/bars/:year/:month', (req: Request, res: Response) => {
         barData.isBrownPill ? 1 : 0,
         barData.pillPosition || null,
         barData.hasSpecialStar ? 1 : 0,
+        barData.hasPrivateBooking ? 1 : 0,
         specialStatus?.type || null,
         specialStatus?.labelTh || null,
         specialStatus?.labelEn || null,
@@ -1314,9 +1315,9 @@ adminRouter.post('/admin/bars/:year/:month', (req: Request, res: Response) => {
       db.run(`
         INSERT INTO month_bars (
           id, year, month, dayNum, branch, tourCity, isPinkPill, isBrownPill, pillPosition,
-          hasSpecialStar, specialStatusType, specialStatusLabelTh, specialStatusLabelEn,
+          hasSpecialStar, hasPrivateBooking, specialStatusType, specialStatusLabelTh, specialStatusLabelEn,
           specialStatusSubTh, specialStatusSubEn, specialStatusBadgeBg, specialStatusBadgeText, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
       `, barParams);
     });
 
