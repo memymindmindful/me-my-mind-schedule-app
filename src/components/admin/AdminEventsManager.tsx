@@ -1042,7 +1042,7 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
                   </div>
 
                   {/* Right Action Buttons */}
-                  <div className="flex items-center gap-2 self-end sm:self-center flex-wrap">
+                  <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto justify-start sm:justify-end flex-wrap pt-2 sm:pt-0 border-t sm:border-t-0 border-[#F5EFEA]">
                     {/* Quick Toggle Fully Booked Button */}
                     <button
                       type="button"
@@ -1123,8 +1123,8 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
 
       {/* EDIT / CREATE EVENT POPUP MODAL */}
       {isEditingModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-5 border border-[#E5DFD7] shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-2xl w-full max-h-[92vh] sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6 space-y-5 border border-[#E5DFD7] shadow-2xl">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-[#EFE8E1]">
               <div>
@@ -2185,8 +2185,8 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
 
       {/* Modal: Duplicate Event Across Months */}
       {duplicatingEvent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-5 border border-[#E5DFD7] shadow-2xl animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-lg w-full p-4 sm:p-6 space-y-5 border border-[#E5DFD7] shadow-2xl animate-in slide-in-from-bottom-5 sm:zoom-in-95 duration-150 max-h-[92vh] sm:max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="flex items-start justify-between border-b border-[#E5DFD7] pb-3">
               <div className="flex items-center gap-3">

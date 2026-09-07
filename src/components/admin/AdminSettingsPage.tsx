@@ -34,8 +34,20 @@ import { BranchesEditor } from './BranchesEditor';
 import { ServicesEditor } from './ServicesEditor';
 import { ContactInfoEditor } from './ContactInfoEditor';
 
-export const AdminSettingsPage: React.FC = () => {
-  const [activeSubTab, setActiveSubTab] = useState<'studio' | 'facilitator' | 'branches' | 'services' | 'contact'>('studio');
+interface AdminSettingsPageProps {
+  initialSubTab?: 'studio' | 'facilitator' | 'branches' | 'services' | 'contact';
+}
+
+export const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ initialSubTab = 'studio' }) => {
+  const [activeSubTab, setActiveSubTab] = useState<'studio' | 'facilitator' | 'branches' | 'services' | 'contact'>(initialSubTab);
+
+  // Sync active sub-tab if initialSubTab prop changes (e.g. from Studio popup menu)
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
+
   const [settings, setSettings] = useState<AllStudioSettings>(DEFAULT_STUDIO_SETTINGS);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);

@@ -322,14 +322,14 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
                   key={d}
                   type="button"
                   onClick={() => setSelectedDay(d)}
-                  className={`h-16 p-1 rounded-2xl flex flex-col justify-between items-center text-left transition-all border cursor-pointer relative ${
+                  className={`min-h-[54px] sm:h-16 p-1 rounded-xl sm:rounded-2xl flex flex-col justify-between items-center text-left transition-all border cursor-pointer relative ${
                     isSelected 
                       ? 'ring-2 ring-[#E84D84] border-[#E84D84] shadow-md z-10' 
                       : 'hover:border-[#E84D84]/50'
                   } ${badgeBg}`}
                 >
-                  <div className="w-full flex justify-between items-center px-1">
-                    <span className={`text-xs font-bold ${cfg?.isPinkPill && !cfg?.isBrownPill ? 'text-[#1E1E1E]' : ''}`}>
+                  <div className="w-full flex justify-between items-center px-0.5 sm:px-1">
+                    <span className={`text-[11px] sm:text-xs font-bold ${cfg?.isPinkPill && !cfg?.isBrownPill ? 'text-[#1E1E1E]' : ''}`}>
                       {d}
                     </span>
                     <div className="flex items-center gap-0.5">
@@ -337,14 +337,14 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
                         <span className="text-[#FDB827] text-[10px]">★</span>
                       )}
                       {cfg?.hasPrivateBooking && (
-                        <span className="w-3.5 h-3.5 rounded-full bg-[#EC4899] flex items-center justify-center text-white" title="มีจอง Private">
-                          <User className="w-2 h-2 text-white" strokeWidth={3} />
+                        <span className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-[#EC4899] flex items-center justify-center text-white" title="มีจอง Private">
+                          <User className="w-1.5 h-1.5 sm:w-2 sm:h-2 text-white" strokeWidth={3} />
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <span className="text-[9px] font-medium leading-tight truncate max-w-full px-0.5 opacity-90">
+                  <span className="text-[8px] sm:text-[9px] font-medium leading-tight truncate max-w-full px-0.5 opacity-90">
                     {badgeLabel}
                   </span>
                 </button>
@@ -396,7 +396,7 @@ export const AdminBarsManager: React.FC<AdminBarsManagerProps> = ({
             </div>
 
             <form onSubmit={handleApplyBatch} className="space-y-3.5 text-xs">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
                   <label className="block text-[11px] font-semibold text-[#666] mb-1">ตั้งแต่วันที่</label>
                   <input
