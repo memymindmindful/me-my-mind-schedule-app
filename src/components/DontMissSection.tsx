@@ -24,10 +24,15 @@ export const DontMissSection: React.FC<DontMissSectionProps> = ({
   const t = TRANSLATIONS[lang];
   const [currentPage, setCurrentPage] = useState(0);
 
-  // Sort by date chronologically, and break ties by start time (strict chronological order, exclude private events)
+  // Sort by date chronologically, and break ties by start time (strict chronological order, exclude private and past-dated events)
   const sortedEvents = React.useMemo(() => {
+    // Get today's date as YYYY-MM-DD (matches dateStr format), using local time
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
     return [...events]
       .filter(e => !e.isPrivate)
+      .filter(e => e.dateStr >= todayStr) // Exclude events dated before today
       .sort((a, b) => {
         const dateCompare = a.dateStr.localeCompare(b.dateStr);
         if (dateCompare !== 0) return dateCompare;
