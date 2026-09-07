@@ -99,6 +99,7 @@ export async function initDatabase(): Promise<Database> {
       adminNote TEXT,
       isSpecialStar INTEGER DEFAULT 0,
       isFeatured INTEGER DEFAULT 0,
+      isPrivate INTEGER DEFAULT 0,
       createdAt TEXT DEFAULT (datetime('now')),
       updatedAt TEXT DEFAULT (datetime('now'))
     );
@@ -110,6 +111,21 @@ export async function initDatabase(): Promise<Database> {
   try { db.run("ALTER TABLE events ADD COLUMN sensoryNotesEn TEXT"); } catch {}
   try { db.run("ALTER TABLE events ADD COLUMN benefitsEn TEXT"); } catch {}
   try { db.run("ALTER TABLE events ADD COLUMN preparationTipsEn TEXT"); } catch {}
+
+  // Safe migration for isPrivate column
+  try {
+    db.run("ALTER TABLE events ADD COLUMN isPrivate INTEGER DEFAULT 0");
+  } catch {
+    // Column already exists
+  }
+
+  // Safe migration: reset incorrectly-defaulted isFeatured flag on existing events
+  try {
+    db.run("UPDATE events SET isFeatured = 0 WHERE isFeatured = 1");
+    console.log('[DB Migration] Reset incorrectly-defaulted isFeatured flag on existing events.');
+  } catch (err) {
+    console.error('[DB Migration] Failed to reset isFeatured:', err);
+  }
 
   // Safe migration for isFree column
   try {

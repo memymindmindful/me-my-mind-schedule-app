@@ -212,6 +212,7 @@ adminRouter.post('/admin/events', authenticateToken, upload.single('photo'), (re
     const adminNote = body.adminNote || '';
     const isSpecialStar = body.isSpecialStar === 'true' || body.isSpecialStar === true ? 1 : 0;
     const isFeatured = body.isFeatured === 'true' || body.isFeatured === true ? 1 : 0;
+    const isPrivate = body.isPrivate === 'true' || body.isPrivate === true || body.isPrivate === 1 ? 1 : 0;
 
     const rawParams = [
       id, name, englishName, date, dateDisplay, dateStr,
@@ -220,7 +221,7 @@ adminRouter.post('/admin/events', authenticateToken, upload.single('photo'), (re
       description, descriptionEn, locationDetails, posterUrl, posterTag, subtitle, subtitleEn,
       facilitatorName, facilitatorRole, facilitatorBio, useGlobalFacilitator, facilitatorId,
       sensoryNotes, sensoryNotesEn, benefits, benefitsEn, preparationTips, preparationTipsEn, adminNote,
-      isSpecialStar, isFeatured
+      isSpecialStar, isFeatured, isPrivate
     ];
     const params = rawParams.map(v => (v === undefined ? null : v));
 
@@ -232,8 +233,8 @@ adminRouter.post('/admin/events', authenticateToken, upload.single('photo'), (re
         description, descriptionEn, locationDetails, posterUrl, posterTag, subtitle, subtitleEn,
         facilitatorName, facilitatorRole, facilitatorBio, useGlobalFacilitator, facilitatorId,
         sensoryNotes, sensoryNotesEn, benefits, benefitsEn, preparationTips, preparationTipsEn, adminNote,
-        isSpecialStar, isFeatured, createdAt, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        isSpecialStar, isFeatured, isPrivate, createdAt, updatedAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     `, params);
 
     saveDatabase();
@@ -364,6 +365,7 @@ adminRouter.put('/admin/events/:id', authenticateToken, upload.single('photo'), 
       body.adminNote,
       body.isSpecialStar !== undefined ? (body.isSpecialStar === 'true' || body.isSpecialStar === true ? 1 : 0) : null,
       body.isFeatured !== undefined ? (body.isFeatured === 'true' || body.isFeatured === true ? 1 : 0) : null,
+      body.isPrivate !== undefined ? (body.isPrivate === 'true' || body.isPrivate === true || body.isPrivate === 1 ? 1 : 0) : null,
       id
     ];
     const params = rawParams.map(v => (v === undefined ? null : v));
@@ -408,6 +410,7 @@ adminRouter.put('/admin/events/:id', authenticateToken, upload.single('photo'), 
         adminNote = COALESCE(?, adminNote),
         isSpecialStar = COALESCE(?, isSpecialStar),
         isFeatured = COALESCE(?, isFeatured),
+        isPrivate = COALESCE(?, isPrivate),
         updatedAt = datetime('now')
       WHERE id = ?
     `, params);

@@ -24,13 +24,15 @@ export const DontMissSection: React.FC<DontMissSectionProps> = ({
   const t = TRANSLATIONS[lang];
   const [currentPage, setCurrentPage] = useState(0);
 
-  // Sort by date chronologically, and break ties by start time (strict chronological order)
+  // Sort by date chronologically, and break ties by start time (strict chronological order, exclude private events)
   const sortedEvents = React.useMemo(() => {
-    return [...events].sort((a, b) => {
-      const dateCompare = a.dateStr.localeCompare(b.dateStr);
-      if (dateCompare !== 0) return dateCompare;
-      return parseTimeToMinutes(a.startTime) - parseTimeToMinutes(b.startTime);
-    });
+    return [...events]
+      .filter(e => !e.isPrivate)
+      .sort((a, b) => {
+        const dateCompare = a.dateStr.localeCompare(b.dateStr);
+        if (dateCompare !== 0) return dateCompare;
+        return parseTimeToMinutes(a.startTime) - parseTimeToMinutes(b.startTime);
+      });
   }, [events]);
 
   const totalPages = Math.max(1, Math.ceil(sortedEvents.length / ITEMS_PER_PAGE));
@@ -133,7 +135,7 @@ export const DontMissSection: React.FC<DontMissSectionProps> = ({
                   <span className="text-[13.5px] sm:text-[14px] font-normal text-[#222] tracking-tight group-hover:text-[#E84D84] transition-colors line-clamp-1">
                     {displayName}
                   </span>
-                  {(event.isSpecialStar || event.isFeatured) && (
+                  {event.isSpecialStar && (
                     <span 
                       className="text-[#FDB827] text-xs flex-shrink-0" 
                       title={lang === 'th' ? 'กิจกรรมไฮไลท์ประจำเดือน' : 'Special Featured Event'}

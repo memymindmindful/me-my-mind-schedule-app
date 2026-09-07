@@ -68,7 +68,8 @@ const DEFAULT_EVENT_FORM: Partial<ScheduleEvent> = {
   preparationTips: ['สวมใส่ชุดหลวมสบาย ไม่รัดแน่น'],
   preparationTipsEn: ['Wear comfortable, loose-fitting clothes'],
   isSpecialStar: false,
-  isFeatured: true,
+  isFeatured: false,
+  isPrivate: false,
   adminNote: '',
   status: 'available'
 };
@@ -501,6 +502,28 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
     }
   };
 
+  // Quick toggle Private Event from list row
+  const handleQuickTogglePrivate = async (evt: ScheduleEvent) => {
+    const newIsPrivate = !evt.isPrivate;
+
+    const updated = events.map(e => e.id === evt.id ? { ...e, isPrivate: newIsPrivate } : e);
+    setEvents(updated);
+
+    const res = await apiUpdateEvent(evt.id, { isPrivate: newIsPrivate });
+    if (res && res.success) {
+      window.dispatchEvent(new CustomEvent('mmm_events_updated', {
+        detail: { year: currentYear, month: currentMonth, events: updated }
+      }));
+      onDataChanged();
+      showToast(newIsPrivate 
+        ? `ปรับ "${evt.name}" เป็นกิจกรรม Private แล้ว` 
+        : `ยกเลิกสถานะ Private ของ "${evt.name}" แล้ว`, 'success');
+    } else {
+      showToast(`❌ ปรับสถานะไม่สำเร็จ: ${res?.error || 'เกิดข้อผิดพลาด'}`, 'error');
+      await refreshEvents();
+    }
+  };
+
   // Quick update booked count (+ / -)
   const handleQuickUpdateBookedCount = async (evt: ScheduleEvent, delta: number) => {
     const newCount = Math.max(0, Math.min(evt.capacity, (evt.bookedCount || 0) + delta));
@@ -719,7 +742,8 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
       posterUrl: formData.posterUrl,
       posterTag: formData.posterTag,
       isSpecialStar: !!formData.isSpecialStar,
-      isFeatured: formData.isFeatured !== false,
+      isFeatured: !!formData.isFeatured,
+      isPrivate: !!formData.isPrivate,
       adminNote: formData.adminNote?.trim() || '',
       status
     };
@@ -919,6 +943,13 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
                           </span>
                         )}
 
+                        {/* Private Badge */}
+                        {evt.isPrivate && (
+                          <span className="px-2 py-0.5 rounded-full bg-[#FDF2F8] text-[#BE185D] border border-[#FBCFE8] text-[10px] font-bold flex items-center gap-1">
+                            👤 Private
+                          </span>
+                        )}
+
                         {/* Branch Tag */}
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                           evt.branch === 'Online'
@@ -1025,6 +1056,21 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
                     >
                       {isFull ? <XCircle className="w-3.5 h-3.5 text-[#D92D4B]" /> : <CheckCircle2 className="w-3.5 h-3.5 text-[#888]" />}
                       <span>{isFull ? 'ปลดล็อค (ว่าง)' : 'เต็มแล้ว'}</span>
+                    </button>
+
+                    {/* Quick Toggle Private Event Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleQuickTogglePrivate(evt)}
+                      className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer border ${
+                        evt.isPrivate
+                          ? 'bg-[#FDF2F8] text-[#BE185D] border-[#FBCFE8] hover:bg-[#FCE7F3]'
+                          : 'bg-[#FAF7F5] text-[#666] border-[#E5DFD7] hover:bg-[#FDF2F8] hover:text-[#BE185D] hover:border-[#FBCFE8]'
+                      }`}
+                      title={evt.isPrivate ? 'ยกเลิก Private' : 'ทำเครื่องหมายเป็น Private'}
+                    >
+                      <span className="text-[11px]">👤</span>
+                      <span>{evt.isPrivate ? 'Private' : 'ทำเป็น Private'}</span>
                     </button>
 
                     {/* Quick Same-Day Duplicate */}
@@ -2094,6 +2140,23 @@ export const AdminEventsManager: React.FC<AdminEventsManagerProps> = ({
                   checked={!!formData.isSpecialStar}
                   onChange={(e) => setFormData({ ...formData, isSpecialStar: e.target.checked })}
                   className="w-4 h-4 accent-[#FDB827] cursor-pointer"
+                />
+              </div>
+
+              {/* Row 14: Private Event Toggle */}
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-[#FDF2F8] border border-[#FBCFE8]">
+                <div>
+                  <label htmlFor="isPrivateEvent" className="font-bold text-xs text-[#BE185D] block flex items-center gap-1 cursor-pointer">
+                    <span>👤 เป็นกิจกรรม Private (Private Event)</span>
+                  </label>
+                  <span className="text-[11px] text-[#DB2777]">แสดงไอคอนบุคคลสีชมพูบนปฏิทิน และจะไม่แสดงในส่วน DON'T MISS</span>
+                </div>
+                <input
+                  type="checkbox"
+                  id="isPrivateEvent"
+                  checked={!!formData.isPrivate}
+                  onChange={(e) => setFormData({ ...formData, isPrivate: e.target.checked })}
+                  className="w-4 h-4 accent-[#EC4899] cursor-pointer"
                 />
               </div>
 

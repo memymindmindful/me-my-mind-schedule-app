@@ -88,7 +88,7 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
       hasSpecialStar: !!dayBar?.hasSpecialStar || dayEvents.some(e => e.isSpecialStar),
       hasOnlineEvent: dayEvents.some(e => e.branch === 'Online'),
       hasFullyBooked: isDayFullyBooked,
-      hasPrivateBooking: !!dayBar?.hasPrivateBooking,
+      hasPrivateBooking: !!dayBar?.hasPrivateBooking || dayEvents.some(e => e.isPrivate),
       isPinkPill: dayBar?.isPinkPill ?? (branch === 'Ratchathewi' && dayEvents.length > 0),
       isBrownPill: dayBar?.isBrownPill ?? (branch === 'On-Tour'),
       isSundayPink: isSunday,

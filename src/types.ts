@@ -51,6 +51,7 @@ export interface ScheduleEvent {
   posterTag?: string; // Optional aesthetic tag on poster
   isSpecialStar?: boolean; // Star icon on calendar date
   isFeatured?: boolean;
+  isPrivate?: boolean; // Private booking event (hidden from DON'T MISS, triggers pink user icon on calendar)
   adminNote?: string; // Short note/badge for the event (e.g. 'รอบพิเศษ', 'โปรโมชั่น 2 แถม 1')
   status: 'available' | 'almost_full' | 'fully_booked';
 }

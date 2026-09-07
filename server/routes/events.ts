@@ -71,6 +71,7 @@ export function mapRowToEvent(columns: string[], row: any[]) {
     adminNote: obj.adminNote || '',
     isSpecialStar: Boolean(obj.isSpecialStar),
     isFeatured: Boolean(obj.isFeatured),
+    isPrivate: Boolean(obj.isPrivate),
     createdAt: obj.createdAt,
     updatedAt: obj.updatedAt
   };
