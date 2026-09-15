@@ -488,7 +488,7 @@ eventsRouter.get('/private-schedule/current', (_req: Request, res: Response) => 
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
     const periodRows = db.exec(
-      "SELECT id, title, titleEn, startDate, endDate, createdAt, updatedAt FROM private_schedule_periods WHERE endDate >= ? ORDER BY startDate ASC, createdAt DESC LIMIT 1",
+      "SELECT id, title, titleEn, startDate, endDate, createdAt, updatedAt, description, descriptionEn FROM private_schedule_periods WHERE endDate >= ? ORDER BY startDate ASC, createdAt DESC LIMIT 1",
       [todayStr]
     );
 
@@ -509,7 +509,9 @@ eventsRouter.get('/private-schedule/current', (_req: Request, res: Response) => 
       startDate: pVals[3] as string,
       endDate: pVals[4] as string,
       createdAt: pVals[5] as string,
-      updatedAt: pVals[6] as string
+      updatedAt: pVals[6] as string,
+      description: (pVals[7] as string) || '',
+      descriptionEn: (pVals[8] as string) || ''
     };
 
     const slotRows = db.exec(

@@ -225,6 +225,8 @@ export interface PrivateSchedulePeriod {
   id: string;
   title: string; // free text: location name, activity name, or both
   titleEn?: string; // optional English title, falls back to title if empty
+  description?: string; // free text, Thai
+  descriptionEn?: string; // free text, English (optional, falls back to description if empty)
   startDate: string; // YYYY-MM-DD
   endDate: string; // YYYY-MM-DD
   createdAt?: string;

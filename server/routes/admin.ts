@@ -1477,7 +1477,7 @@ adminRouter.get('/admin/private-schedule/periods', authenticateToken, (_req: Aut
   try {
     const db = getDatabase();
     const periodRows = db.exec(`
-      SELECT id, title, titleEn, startDate, endDate, createdAt, updatedAt
+      SELECT id, title, titleEn, startDate, endDate, createdAt, updatedAt, description, descriptionEn
       FROM private_schedule_periods
       ORDER BY startDate DESC, createdAt DESC
     `);
@@ -1515,6 +1515,8 @@ adminRouter.get('/admin/private-schedule/periods', authenticateToken, (_req: Aut
         endDate: r[4] as string,
         createdAt: r[5] as string,
         updatedAt: r[6] as string,
+        description: (r[7] as string) || '',
+        descriptionEn: (r[8] as string) || '',
         totalSlotsCount: slotsCount,
         totalBookingsCount: totalBookings,
         bookedCount
@@ -1535,7 +1537,7 @@ adminRouter.get('/admin/private-schedule/periods', authenticateToken, (_req: Aut
 adminRouter.post('/admin/private-schedule/periods', authenticateToken, (req: AuthRequest, res: Response) => {
   try {
     const db = getDatabase();
-    const { title, titleEn, startDate, endDate, slots } = req.body;
+    const { title, titleEn, description, descriptionEn, startDate, endDate, slots } = req.body;
 
     if (!title || !startDate || !endDate) {
       res.status(400).json({
@@ -1560,14 +1562,16 @@ adminRouter.post('/admin/private-schedule/periods', authenticateToken, (req: Aut
       periodId,
       title.trim(),
       titleEn ? String(titleEn).trim() : null,
+      description ? String(description).trim() : null,
+      descriptionEn ? String(descriptionEn).trim() : null,
       startDate.trim(),
       endDate.trim()
     ];
     const periodParams = periodRawParams.map(v => (v === undefined ? null : v));
 
     db.run(`
-      INSERT INTO private_schedule_periods (id, title, titleEn, startDate, endDate, createdAt, updatedAt)
-      VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+      INSERT INTO private_schedule_periods (id, title, titleEn, description, descriptionEn, startDate, endDate, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     `, periodParams);
 
     // Insert slot templates

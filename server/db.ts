@@ -429,6 +429,8 @@ Kru Beever 🤍`;
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
       titleEn TEXT,
+      description TEXT,
+      descriptionEn TEXT,
       startDate TEXT NOT NULL,
       endDate TEXT NOT NULL,
       createdAt TEXT,
@@ -438,6 +440,12 @@ Kru Beever 🤍`;
 
   try {
     db.run("ALTER TABLE private_schedule_periods ADD COLUMN titleEn TEXT");
+  } catch {}
+  try {
+    db.run("ALTER TABLE private_schedule_periods ADD COLUMN description TEXT");
+  } catch {}
+  try {
+    db.run("ALTER TABLE private_schedule_periods ADD COLUMN descriptionEn TEXT");
   } catch {}
 
   db.run(`

@@ -103,6 +103,8 @@ export const AdminPrivateSchedule: React.FC = () => {
   // Form states for creating a new period
   const [formTitle, setFormTitle] = useState<string>('สาขาราชเทวี');
   const [formTitleEn, setFormTitleEn] = useState<string>('');
+  const [formDescription, setFormDescription] = useState<string>('');
+  const [formDescriptionEn, setFormDescriptionEn] = useState<string>('');
   const [formStartDate, setFormStartDate] = useState<string>(() => {
     const today = new Date();
     return today.toISOString().split('T')[0];
@@ -287,6 +289,8 @@ export const AdminPrivateSchedule: React.FC = () => {
       const res = await apiCreatePrivateSchedulePeriod({
         title: formTitle.trim(),
         titleEn: formTitleEn.trim() || undefined,
+        description: formDescription.trim() || undefined,
+        descriptionEn: formDescriptionEn.trim() || undefined,
         startDate: formStartDate,
         endDate: formEndDate,
         slots: formSlots.map(s => ({ startTime: s.startTime, endTime: s.endTime }))
@@ -294,6 +298,8 @@ export const AdminPrivateSchedule: React.FC = () => {
 
       if (res.success) {
         showToast('สร้างตารางคิว Private สำเร็จ');
+        setFormDescription('');
+        setFormDescriptionEn('');
         setShowCreateForm(false);
         await loadCurrentPeriod(true);
         await loadAllPeriods();
@@ -491,6 +497,41 @@ export const AdminPrivateSchedule: React.FC = () => {
                   </div>
                 </div>
 
+                {/* 1.5 Additional Details / Description */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-[#1E1E1E]">
+                      รายละเอียดเพิ่มเติม (ไม่บังคับ)
+                    </label>
+                    <textarea
+                      value={formDescription}
+                      onChange={(e) => setFormDescription(e.target.value)}
+                      rows={3}
+                      placeholder="เช่น มีกิจกรรมพิเศษ Sound Bath ในรอบนี้ด้วย, จองได้ทั้งกิจกรรมกลุ่มและ 1-on-1"
+                      className="w-full px-4 py-2.5 rounded-2xl border border-[#E5DFD7] bg-[#FAF8F5] text-sm focus:outline-none focus:border-[#E84D84] focus:bg-white transition-all resize-none"
+                    />
+                    <span className="text-[11px] text-[#888] block">
+                      ข้อความรายละเอียดเพิ่มเติมเกี่ยวกับรอบนี้ จะแสดงในหน้าลูกค้า
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-[#1E1E1E]">
+                      Additional Details (English, optional)
+                    </label>
+                    <textarea
+                      value={formDescriptionEn}
+                      onChange={(e) => setFormDescriptionEn(e.target.value)}
+                      rows={3}
+                      placeholder="e.g. Special Sound Bath sessions available this visit, 1-on-1 bookings welcome"
+                      className="w-full px-4 py-2.5 rounded-2xl border border-[#E5DFD7] bg-[#FAF8F5] text-sm focus:outline-none focus:border-[#E84D84] focus:bg-white transition-all resize-none"
+                    />
+                    <span className="text-[11px] text-[#888] block">
+                      หากเว้นว่างไว้ ในโหมดภาษาอังกฤษจะแสดงข้อความภาษาไทยแทน
+                    </span>
+                  </div>
+                </div>
+
                 {/* 2. Date Range */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -637,6 +678,11 @@ export const AdminPrivateSchedule: React.FC = () => {
                       <Calendar className="w-3.5 h-3.5" />
                       <span>{formatPeriodRange(currentPeriodData.period.startDate, currentPeriodData.period.endDate)}</span>
                     </p>
+                    {currentPeriodData.period.description && (
+                      <p className="text-xs text-[#666] mt-2 max-w-xl bg-[#FAF8F5] p-2.5 rounded-xl border border-[#E5DFD7] leading-relaxed">
+                        {currentPeriodData.period.description}
+                      </p>
+                    )}
                   </div>
 
                   {/* Stats Counter & Controls */}
@@ -874,6 +920,11 @@ export const AdminPrivateSchedule: React.FC = () => {
                           <Calendar className="w-3.5 h-3.5 text-[#E84D84]" />
                           <span>{formatPeriodRange(p.startDate, p.endDate)}</span>
                         </p>
+                        {p.description && (
+                          <p className="text-xs text-[#777] mt-1.5 line-clamp-2">
+                            {p.description}
+                          </p>
+                        )}
                       </div>
 
                       <button

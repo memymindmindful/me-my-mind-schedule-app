@@ -607,6 +607,8 @@ export async function apiFetchAllPrivateSchedulePeriods(): Promise<ApiResponse<P
 export async function apiCreatePrivateSchedulePeriod(data: {
   title: string;
   titleEn?: string;
+  description?: string;
+  descriptionEn?: string;
   startDate: string;
   endDate: string;
   slots: { startTime: string; endTime: string }[];

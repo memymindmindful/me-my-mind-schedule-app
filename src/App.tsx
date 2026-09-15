@@ -400,7 +400,7 @@ export default function App() {
 
   // If Special Private Schedule View is active, render customer schedule view
   if (currentView === 'private-schedule') {
-    return <PrivateScheduleView onBackToCalendar={navigateToClient} />;
+    return <PrivateScheduleView />;
   }
 
   return (
