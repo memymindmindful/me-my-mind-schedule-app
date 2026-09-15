@@ -300,6 +300,19 @@ export const CalendarMonthView: React.FC<CalendarMonthViewProps> = ({
               {t.fullyBooked}
             </span>
           </div>
+
+          {/* Private Booking Indicator */}
+          <div 
+            className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[#333333]"
+            title={lang === 'th' ? 'มีคิวจอง Private ในวันนี้' : 'Has a Private booking today'}
+          >
+            <span className="w-3.5 h-3.5 rounded-full bg-[#EC4899] inline-flex items-center justify-center shadow-2xs flex-shrink-0">
+              <User className="w-2.5 h-2.5 text-white" strokeWidth={2.5} />
+            </span>
+            <span className="leading-none text-[#EC4899] font-medium">
+              {lang === 'th' ? 'คิว Private' : 'Private'}
+            </span>
+          </div>
         </div>
 
       </div>

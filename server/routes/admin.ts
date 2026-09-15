@@ -1469,3 +1469,237 @@ adminRouter.post('/admin/reset-data', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/admin/private-schedule/periods
+ * List ALL periods (past + current + future) for history view (Requires Auth)
+ */
+adminRouter.get('/admin/private-schedule/periods', authenticateToken, (_req: AuthRequest, res: Response) => {
+  try {
+    const db = getDatabase();
+    const periodRows = db.exec(`
+      SELECT id, title, titleEn, startDate, endDate, createdAt, updatedAt
+      FROM private_schedule_periods
+      ORDER BY startDate DESC, createdAt DESC
+    `);
+
+    if (!periodRows || periodRows.length === 0 || periodRows[0].values.length === 0) {
+      res.json({ success: true, data: [] });
+      return;
+    }
+
+    const periods = periodRows[0].values.map(r => {
+      const id = r[0] as string;
+      let totalBookings = 0;
+      let bookedCount = 0;
+      const countRes = db.exec("SELECT status, count(*) FROM private_schedule_bookings WHERE periodId = ? GROUP BY status", [id]);
+      if (countRes && countRes.length > 0) {
+        for (const cVal of countRes[0].values) {
+          const status = cVal[0] as string;
+          const count = Number(cVal[1]) || 0;
+          totalBookings += count;
+          if (status === 'booked') bookedCount += count;
+        }
+      }
+
+      let slotsCount = 0;
+      const slotRes = db.exec("SELECT count(*) FROM private_schedule_slot_templates WHERE periodId = ?", [id]);
+      if (slotRes && slotRes.length > 0 && slotRes[0].values.length > 0) {
+        slotsCount = Number(slotRes[0].values[0][0]) || 0;
+      }
+
+      return {
+        id,
+        title: r[1] as string,
+        titleEn: (r[2] as string) || '',
+        startDate: r[3] as string,
+        endDate: r[4] as string,
+        createdAt: r[5] as string,
+        updatedAt: r[6] as string,
+        totalSlotsCount: slotsCount,
+        totalBookingsCount: totalBookings,
+        bookedCount
+      };
+    });
+
+    res.json({ success: true, data: periods });
+  } catch (error: any) {
+    console.error('[GET /admin/private-schedule/periods]', error);
+    res.status(500).json({ success: false, error: error.message, code: 'SERVER_ERROR' });
+  }
+});
+
+/**
+ * POST /api/admin/private-schedule/periods
+ * Create new period with slot templates and auto-generated date*slot bookings (Requires Auth)
+ */
+adminRouter.post('/admin/private-schedule/periods', authenticateToken, (req: AuthRequest, res: Response) => {
+  try {
+    const db = getDatabase();
+    const { title, titleEn, startDate, endDate, slots } = req.body;
+
+    if (!title || !startDate || !endDate) {
+      res.status(400).json({
+        success: false,
+        error: 'title, startDate, and endDate are required',
+        code: 'MISSING_FIELDS'
+      });
+      return;
+    }
+
+    if (!Array.isArray(slots) || slots.length === 0) {
+      res.status(400).json({
+        success: false,
+        error: 'At least one slot template is required',
+        code: 'MISSING_SLOTS'
+      });
+      return;
+    }
+
+    const periodId = uuidv4();
+    const periodRawParams = [
+      periodId,
+      title.trim(),
+      titleEn ? String(titleEn).trim() : null,
+      startDate.trim(),
+      endDate.trim()
+    ];
+    const periodParams = periodRawParams.map(v => (v === undefined ? null : v));
+
+    db.run(`
+      INSERT INTO private_schedule_periods (id, title, titleEn, startDate, endDate, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    `, periodParams);
+
+    // Insert slot templates
+    const createdSlots: { id: string; periodId: string; startTime: string; endTime: string; displayOrder: number }[] = [];
+    slots.forEach((s: any, idx: number) => {
+      const slotId = uuidv4();
+      const startTime = String(s.startTime || '10:00').trim();
+      const endTime = String(s.endTime || '11:30').trim();
+      const slotRawParams = [slotId, periodId, startTime, endTime, idx];
+      const slotParams = slotRawParams.map(v => (v === undefined ? null : v));
+
+      db.run(`
+        INSERT INTO private_schedule_slot_templates (id, periodId, startTime, endTime, displayOrder)
+        VALUES (?, ?, ?, ?, ?)
+      `, slotParams);
+
+      createdSlots.push({
+        id: slotId,
+        periodId,
+        startTime,
+        endTime,
+        displayOrder: idx
+      });
+    });
+
+    // Generate dates between startDate and endDate
+    const dates: string[] = [];
+    const [sY, sM, sD] = startDate.split('-').map(Number);
+    const [eY, eM, eD] = endDate.split('-').map(Number);
+    let curr = new Date(Date.UTC(sY, sM - 1, sD));
+    const end = new Date(Date.UTC(eY, eM - 1, eD));
+    while (curr <= end) {
+      dates.push(curr.toISOString().split('T')[0]);
+      curr.setUTCDate(curr.getUTCDate() + 1);
+    }
+
+    // Auto-generate bookings: for each date * each slot template
+    dates.forEach(d => {
+      createdSlots.forEach(s => {
+        const bookingId = uuidv4();
+        const bookingRawParams = [bookingId, periodId, s.id, d, 'available'];
+        const bookingParams = bookingRawParams.map(v => (v === undefined ? null : v));
+
+        db.run(`
+          INSERT INTO private_schedule_bookings (id, periodId, slotTemplateId, date, status)
+          VALUES (?, ?, ?, ?, ?)
+        `, bookingParams);
+      });
+    });
+
+    saveDatabase();
+
+    res.status(201).json({
+      success: true,
+      message: 'Private schedule period created successfully',
+      data: {
+        id: periodId,
+        title,
+        startDate,
+        endDate,
+        slotsCount: createdSlots.length,
+        datesCount: dates.length,
+        totalBookings: dates.length * createdSlots.length
+      }
+    });
+  } catch (error: any) {
+    console.error('[POST /admin/private-schedule/periods]', error);
+    res.status(500).json({ success: false, error: error.message, code: 'SERVER_ERROR' });
+  }
+});
+
+/**
+ * PUT /api/admin/private-schedule/bookings/:id
+ * Toggle status of a single booking slot ('available' <-> 'booked') (Requires Auth)
+ */
+adminRouter.put('/admin/private-schedule/bookings/:id', authenticateToken, (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+
+    const existingRows = db.exec("SELECT id, status FROM private_schedule_bookings WHERE id = ?", [id]);
+    if (!existingRows || existingRows.length === 0 || existingRows[0].values.length === 0) {
+      res.status(404).json({ success: false, error: 'Booking slot not found', code: 'NOT_FOUND' });
+      return;
+    }
+
+    const currentStatus = existingRows[0].values[0][1] as string;
+    let newStatus: string;
+    if (req.body && req.body.status && (req.body.status === 'available' || req.body.status === 'booked')) {
+      newStatus = req.body.status;
+    } else {
+      newStatus = currentStatus === 'booked' ? 'available' : 'booked';
+    }
+
+    const rawParams = [newStatus, id];
+    const params = rawParams.map(v => (v === undefined ? null : v));
+
+    db.run("UPDATE private_schedule_bookings SET status = ? WHERE id = ?", params);
+    saveDatabase();
+
+    res.json({
+      success: true,
+      message: `Status updated to ${newStatus}`,
+      data: { id, status: newStatus }
+    });
+  } catch (error: any) {
+    console.error('[PUT /admin/private-schedule/bookings/:id]', error);
+    res.status(500).json({ success: false, error: error.message, code: 'SERVER_ERROR' });
+  }
+});
+
+/**
+ * DELETE /api/admin/private-schedule/periods/:id
+ * Delete an entire period and cascade delete slot templates + bookings (Requires Auth)
+ */
+adminRouter.delete('/admin/private-schedule/periods/:id', authenticateToken, (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+
+    db.run("DELETE FROM private_schedule_bookings WHERE periodId = ?", [id]);
+    db.run("DELETE FROM private_schedule_slot_templates WHERE periodId = ?", [id]);
+    db.run("DELETE FROM private_schedule_periods WHERE id = ?", [id]);
+    saveDatabase();
+
+    res.json({
+      success: true,
+      message: 'Private schedule period and associated slots/bookings deleted successfully'
+    });
+  } catch (error: any) {
+    console.error('[DELETE /admin/private-schedule/periods/:id]', error);
+    res.status(500).json({ success: false, error: error.message, code: 'SERVER_ERROR' });
+  }
+});
+

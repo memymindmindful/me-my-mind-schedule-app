@@ -9,7 +9,8 @@ import {
   Award,
   Globe,
   Phone,
-  Mail
+  Mail,
+  ChevronRight
 } from 'lucide-react';
 import { Language, TRANSLATIONS } from '../utils/translations';
 import { AllStudioSettings } from '../types';

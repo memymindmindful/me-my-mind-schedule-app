@@ -423,6 +423,46 @@ Kru Beever 🤍`;
     db.run("ALTER TABLE month_bars ADD COLUMN hasPrivateBooking INTEGER DEFAULT 0");
   } catch {}
 
+  // Special Private Schedule Tables
+  db.run(`
+    CREATE TABLE IF NOT EXISTS private_schedule_periods (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      titleEn TEXT,
+      startDate TEXT NOT NULL,
+      endDate TEXT NOT NULL,
+      createdAt TEXT,
+      updatedAt TEXT
+    );
+  `);
+
+  try {
+    db.run("ALTER TABLE private_schedule_periods ADD COLUMN titleEn TEXT");
+  } catch {}
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS private_schedule_slot_templates (
+      id TEXT PRIMARY KEY,
+      periodId TEXT NOT NULL,
+      startTime TEXT NOT NULL,
+      endTime TEXT NOT NULL,
+      displayOrder INTEGER DEFAULT 0,
+      FOREIGN KEY (periodId) REFERENCES private_schedule_periods(id)
+    );
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS private_schedule_bookings (
+      id TEXT PRIMARY KEY,
+      periodId TEXT NOT NULL,
+      slotTemplateId TEXT NOT NULL,
+      date TEXT NOT NULL,
+      status TEXT DEFAULT 'available',
+      FOREIGN KEY (periodId) REFERENCES private_schedule_periods(id),
+      FOREIGN KEY (slotTemplateId) REFERENCES private_schedule_slot_templates(id)
+    );
+  `);
+
   // Safe migration: repair existing special status labels to short text and clean sub-text
   try {
     db.run(`

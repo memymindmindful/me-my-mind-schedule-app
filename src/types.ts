@@ -220,3 +220,44 @@ export interface AllStudioSettings {
   contact: ContactInfo;
 }
 
+// Special Private Schedule Models
+export interface PrivateSchedulePeriod {
+  id: string;
+  title: string; // free text: location name, activity name, or both
+  titleEn?: string; // optional English title, falls back to title if empty
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  createdAt?: string;
+  updatedAt?: string;
+  totalSlotsCount?: number;
+  totalBookingsCount?: number;
+  bookedCount?: number;
+}
+
+export interface SlotTemplate {
+  id: string;
+  periodId: string;
+  startTime: string; // e.g. "10:00"
+  endTime: string; // e.g. "11:30"
+  displayOrder: number;
+}
+
+export interface PrivateScheduleBooking {
+  id: string;
+  periodId: string;
+  slotTemplateId: string;
+  date: string; // YYYY-MM-DD
+  status: 'available' | 'booked';
+}
+
+export interface PrivateSchedulePeriodWithDetails {
+  period: PrivateSchedulePeriod;
+  slots: SlotTemplate[];
+  bookings: PrivateScheduleBooking[];
+}
+
+export interface PrivateScheduleCurrentResponse {
+  active: boolean;
+  data: PrivateSchedulePeriodWithDetails | null;
+}
+

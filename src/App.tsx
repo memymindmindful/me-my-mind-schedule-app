@@ -11,24 +11,34 @@ import { BookingInstructionsModal } from './components/BookingInstructionsModal'
 import { OptionsMenuModal } from './components/OptionsMenuModal';
 import { WelcomeGuideModal } from './components/WelcomeGuideModal';
 import { AdminDashboard } from './components/admin/AdminDashboard';
+import { PrivateScheduleView } from './components/PrivateScheduleView';
 import { Language, TRANSLATIONS } from './utils/translations';
 import { CheckCircle } from 'lucide-react';
 
-export default function App() {
-  // Check URL query param ?view=admin or #admin
-  const [isAdminView, setIsAdminView] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get('view') === 'admin' || window.location.pathname.includes('/admin') || window.location.hash === '#admin';
+type ViewType = 'client' | 'admin' | 'private-schedule';
+
+const getViewFromLocation = (): ViewType => {
+  if (typeof window !== 'undefined') {
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewParam = urlParams.get('view');
+    if (viewParam === 'admin' || window.location.pathname.includes('/admin') || window.location.hash === '#admin') {
+      return 'admin';
     }
-    return false;
-  });
+    if (viewParam === 'private-schedule' || window.location.hash === '#private-schedule') {
+      return 'private-schedule';
+    }
+  }
+  return 'client';
+};
+
+export default function App() {
+  // Current active view mode
+  const [currentView, setCurrentView] = useState<ViewType>(getViewFromLocation);
 
   // Listen to popstate or hashchange
   useEffect(() => {
     const handleLocationChange = () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      setIsAdminView(urlParams.get('view') === 'admin' || window.location.hash === '#admin' || window.location.pathname.includes('/admin'));
+      setCurrentView(getViewFromLocation());
     };
 
     window.addEventListener('popstate', handleLocationChange);
@@ -40,7 +50,7 @@ export default function App() {
   }, []);
 
   const navigateToAdmin = () => {
-    setIsAdminView(true);
+    setCurrentView('admin');
     try {
       const url = new URL(window.location.href);
       url.searchParams.set('view', 'admin');
@@ -50,8 +60,19 @@ export default function App() {
     }
   };
 
+  const navigateToPrivateSchedule = () => {
+    setCurrentView('private-schedule');
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('view', 'private-schedule');
+      window.history.pushState({}, '', url.toString());
+    } catch {
+      window.location.hash = 'private-schedule';
+    }
+  };
+
   const navigateToClient = () => {
-    setIsAdminView(false);
+    setCurrentView('client');
     try {
       const url = new URL(window.location.href);
       url.searchParams.delete('view');
@@ -373,8 +394,13 @@ export default function App() {
   };
 
   // If Admin View is active, render full Admin Portal
-  if (isAdminView) {
+  if (currentView === 'admin') {
     return <AdminDashboard onBackToClient={navigateToClient} />;
+  }
+
+  // If Special Private Schedule View is active, render customer schedule view
+  if (currentView === 'private-schedule') {
+    return <PrivateScheduleView onBackToCalendar={navigateToClient} />;
   }
 
   return (

@@ -1,4 +1,9 @@
-import { ScheduleEvent } from '../types';
+import {
+  ScheduleEvent,
+  PrivateSchedulePeriod,
+  PrivateSchedulePeriodWithDetails,
+  PrivateScheduleCurrentResponse
+} from '../types';
 
 const API_BASE = '/api';
 
@@ -546,6 +551,116 @@ export async function apiResetData(resetType: 'all_data' | 'month_events' | 'mon
     return handleResponse(res);
   } catch (err: any) {
     console.warn('apiResetData failed:', err);
+    return { success: false, error: err.message || 'Network error' };
+  }
+}
+
+/**
+ * Public: Fetch current/active private schedule period
+ */
+export async function apiFetchCurrentPrivateSchedule(): Promise<PrivateScheduleCurrentResponse | null> {
+  try {
+    const res = await fetch(`${API_BASE}/private-schedule/current`, {
+      headers: {
+        'Cache-Control': 'no-cache'
+      }
+    });
+    if (!res.ok) {
+      console.warn(`[API] Failed to fetch current private schedule (${res.status})`);
+      return null;
+    }
+    const json = await res.json();
+    if (json.success) {
+      return {
+        active: Boolean(json.active),
+        data: json.data || null
+      };
+    }
+    return null;
+  } catch (err) {
+    console.error('apiFetchCurrentPrivateSchedule error:', err);
+    return null;
+  }
+}
+
+/**
+ * Admin: Fetch all private schedule periods (history + current)
+ */
+export async function apiFetchAllPrivateSchedulePeriods(): Promise<ApiResponse<PrivateSchedulePeriod[]>> {
+  const token = getAuthToken();
+  try {
+    const res = await fetch(`${API_BASE}/admin/private-schedule/periods`, {
+      headers: {
+        'Cache-Control': 'no-cache',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    });
+    return handleResponse(res);
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error' };
+  }
+}
+
+/**
+ * Admin: Create new private schedule period
+ */
+export async function apiCreatePrivateSchedulePeriod(data: {
+  title: string;
+  titleEn?: string;
+  startDate: string;
+  endDate: string;
+  slots: { startTime: string; endTime: string }[];
+}): Promise<ApiResponse> {
+  const token = getAuthToken();
+  try {
+    const res = await fetch(`${API_BASE}/admin/private-schedule/periods`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(data)
+    });
+    return handleResponse(res);
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error' };
+  }
+}
+
+/**
+ * Admin: Toggle or set booking slot status
+ */
+export async function apiTogglePrivateScheduleBooking(id: string, status?: 'available' | 'booked'): Promise<ApiResponse> {
+  const token = getAuthToken();
+  try {
+    const res = await fetch(`${API_BASE}/admin/private-schedule/bookings/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ status })
+    });
+    return handleResponse(res);
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error' };
+  }
+}
+
+/**
+ * Admin: Delete private schedule period
+ */
+export async function apiDeletePrivateSchedulePeriod(periodId: string): Promise<ApiResponse> {
+  const token = getAuthToken();
+  try {
+    const res = await fetch(`${API_BASE}/admin/private-schedule/periods/${periodId}`, {
+      method: 'DELETE',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    });
+    return handleResponse(res);
+  } catch (err: any) {
     return { success: false, error: err.message || 'Network error' };
   }
 }

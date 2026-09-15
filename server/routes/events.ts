@@ -474,3 +474,88 @@ eventsRouter.get('/events/:id', (req: Request, res: Response) => {
     });
   }
 });
+
+/**
+ * GET /api/private-schedule/current
+ * Public endpoint: returns the active/upcoming period (endDate >= today)
+ * with its slot templates and per-date booking statuses.
+ * Returns { active: false } if none exists.
+ */
+eventsRouter.get('/private-schedule/current', (_req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    const periodRows = db.exec(
+      "SELECT id, title, titleEn, startDate, endDate, createdAt, updatedAt FROM private_schedule_periods WHERE endDate >= ? ORDER BY startDate ASC, createdAt DESC LIMIT 1",
+      [todayStr]
+    );
+
+    if (!periodRows || periodRows.length === 0 || periodRows[0].values.length === 0) {
+      res.json({
+        success: true,
+        active: false,
+        data: null
+      });
+      return;
+    }
+
+    const pVals = periodRows[0].values[0];
+    const period = {
+      id: pVals[0] as string,
+      title: pVals[1] as string,
+      titleEn: (pVals[2] as string) || '',
+      startDate: pVals[3] as string,
+      endDate: pVals[4] as string,
+      createdAt: pVals[5] as string,
+      updatedAt: pVals[6] as string
+    };
+
+    const slotRows = db.exec(
+      "SELECT id, periodId, startTime, endTime, displayOrder FROM private_schedule_slot_templates WHERE periodId = ? ORDER BY displayOrder ASC, startTime ASC",
+      [period.id]
+    );
+    const slots = slotRows && slotRows.length > 0
+      ? slotRows[0].values.map(r => ({
+          id: r[0] as string,
+          periodId: r[1] as string,
+          startTime: r[2] as string,
+          endTime: r[3] as string,
+          displayOrder: Number(r[4]) || 0
+        }))
+      : [];
+
+    const bookingRows = db.exec(
+      "SELECT id, periodId, slotTemplateId, date, status FROM private_schedule_bookings WHERE periodId = ? ORDER BY date ASC, slotTemplateId ASC",
+      [period.id]
+    );
+    const bookings = bookingRows && bookingRows.length > 0
+      ? bookingRows[0].values.map(r => ({
+          id: r[0] as string,
+          periodId: r[1] as string,
+          slotTemplateId: r[2] as string,
+          date: r[3] as string,
+          status: (r[4] as string) || 'available'
+        }))
+      : [];
+
+    res.json({
+      success: true,
+      active: true,
+      data: {
+        period,
+        slots,
+        bookings
+      }
+    });
+  } catch (error: any) {
+    console.error('[GET /api/private-schedule/current]', error);
+    res.status(500).json({
+      success: false,
+      active: false,
+      error: error.message || 'Internal Server Error',
+      code: 'SERVER_ERROR'
+    });
+  }
+});

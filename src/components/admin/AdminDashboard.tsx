@@ -27,7 +27,8 @@ import {
   Store,
   Users,
   MapPin,
-  MessageCircle
+  MessageCircle,
+  User
 } from 'lucide-react';
 import { checkAdminAuth, setAdminAuth } from '../../utils/adminStorage';
 import { apiResetData, apiVerifyAdminPassword } from '../../utils/apiClient';
@@ -36,6 +37,7 @@ import { AdminBarsManager } from './AdminBarsManager';
 import { AdminEventsManager } from './AdminEventsManager';
 import { AdminAccountSettings } from './AdminAccountSettings';
 import { AdminSettingsPage } from './AdminSettingsPage';
+import { AdminPrivateSchedule } from './AdminPrivateSchedule';
 import { TRANSLATIONS } from '../../utils/translations';
 
 interface AdminDashboardProps {
@@ -44,7 +46,7 @@ interface AdminDashboardProps {
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToClient }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'bars' | 'events' | 'settings' | 'account'>('bars');
+  const [activeTab, setActiveTab] = useState<'bars' | 'events' | 'privateSchedule' | 'settings' | 'account'>('bars');
   const [showStudioMenu, setShowStudioMenu] = useState(false);
   const [studioInitialSubTab, setStudioInitialSubTab] = useState<'studio' | 'facilitator' | 'branches' | 'services' | 'contact'>('studio');
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
@@ -292,12 +294,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToClient }
           />
         )}
 
-        {/* Tab 3: Studio Settings (สตูดิโอ) */}
+        {/* Tab 3: Special Private Schedule Manager */}
+        {activeTab === 'privateSchedule' && (
+          <AdminPrivateSchedule />
+        )}
+
+        {/* Tab 4: Studio Settings (สตูดิโอ) */}
         {activeTab === 'settings' && (
           <AdminSettingsPage initialSubTab={studioInitialSubTab} />
         )}
 
-        {/* Tab 4: Account & Password Manager (ตั้งค่า) */}
+        {/* Tab 5: Account & Password Manager (ตั้งค่า) */}
         {activeTab === 'account' && (
           <AdminAccountSettings
             onCredentialsUpdated={() => {
@@ -619,8 +626,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToClient }
       )}
 
       {/* Fixed Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E5DFD7] shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-2 sm:px-6 py-2">
-        <div className="max-w-xl mx-auto grid grid-cols-4 gap-1 sm:gap-2">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E5DFD7] shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-1.5 sm:px-6 py-2">
+        <div className="max-w-xl mx-auto grid grid-cols-5 gap-0.5 sm:gap-2">
           {/* Tab 1: Calendar (ปฏิทิน) */}
           <button
             type="button"
@@ -628,14 +635,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToClient }
               setActiveTab('bars');
               setShowStudioMenu(false);
             }}
-            className={`py-1.5 px-1 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+            className={`py-1.5 px-0.5 sm:px-1 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
               activeTab === 'bars'
                 ? 'text-[#E84D84] bg-[#FAF0F3]'
                 : 'text-[#666] hover:text-[#1E1E1E] hover:bg-black/5'
             }`}
           >
-            <Calendar className={`w-5 h-5 ${activeTab === 'bars' ? 'stroke-[2.5]' : 'stroke-2'}`} />
-            <span className={`text-[11px] leading-tight ${activeTab === 'bars' ? 'font-bold' : 'font-medium'}`}>
+            <Calendar className={`w-4.5 h-4.5 sm:w-5 sm:h-5 ${activeTab === 'bars' ? 'stroke-[2.5]' : 'stroke-2'}`} />
+            <span className={`text-[10px] sm:text-[11px] leading-tight text-center truncate w-full ${activeTab === 'bars' ? 'font-bold' : 'font-medium'}`}>
               ปฏิทิน
             </span>
           </button>
@@ -647,30 +654,49 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToClient }
               setActiveTab('events');
               setShowStudioMenu(false);
             }}
-            className={`py-1.5 px-1 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+            className={`py-1.5 px-0.5 sm:px-1 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
               activeTab === 'events'
                 ? 'text-[#E84D84] bg-[#FAF0F3]'
                 : 'text-[#666] hover:text-[#1E1E1E] hover:bg-black/5'
             }`}
           >
-            <Ticket className={`w-5 h-5 ${activeTab === 'events' ? 'stroke-[2.5]' : 'stroke-2'}`} />
-            <span className={`text-[11px] leading-tight ${activeTab === 'events' ? 'font-bold' : 'font-medium'}`}>
+            <Ticket className={`w-4.5 h-4.5 sm:w-5 sm:h-5 ${activeTab === 'events' ? 'stroke-[2.5]' : 'stroke-2'}`} />
+            <span className={`text-[10px] sm:text-[11px] leading-tight text-center truncate w-full ${activeTab === 'events' ? 'font-bold' : 'font-medium'}`}>
               อีเวนท์
             </span>
           </button>
 
-          {/* Tab 3: Studio (สตูดิโอ - With Popup Menu) */}
+          {/* Tab 3: Special Private (Private) */}
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('privateSchedule');
+              setShowStudioMenu(false);
+            }}
+            className={`py-1.5 px-0.5 sm:px-1 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative ${
+              activeTab === 'privateSchedule'
+                ? 'text-[#E84D84] bg-[#FAF0F3]'
+                : 'text-[#666] hover:text-[#1E1E1E] hover:bg-black/5'
+            }`}
+          >
+            <User className={`w-4.5 h-4.5 sm:w-5 sm:h-5 ${activeTab === 'privateSchedule' ? 'stroke-[2.5]' : 'stroke-2'}`} />
+            <span className={`text-[9px] sm:text-[11px] leading-tight text-center truncate w-full ${activeTab === 'privateSchedule' ? 'font-bold' : 'font-medium'}`}>
+              Special Private
+            </span>
+          </button>
+
+          {/* Tab 4: Studio (สตูดิโอ - With Popup Menu) */}
           <button
             type="button"
             onClick={() => setShowStudioMenu(prev => !prev)}
-            className={`py-1.5 px-1 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative ${
+            className={`py-1.5 px-0.5 sm:px-1 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative ${
               activeTab === 'settings' || showStudioMenu
                 ? 'text-[#E84D84] bg-[#FAF0F3]'
                 : 'text-[#666] hover:text-[#1E1E1E] hover:bg-black/5'
             }`}
           >
-            <Store className={`w-5 h-5 ${activeTab === 'settings' || showStudioMenu ? 'stroke-[2.5]' : 'stroke-2'}`} />
-            <span className={`text-[11px] leading-tight ${activeTab === 'settings' || showStudioMenu ? 'font-bold' : 'font-medium'}`}>
+            <Store className={`w-4.5 h-4.5 sm:w-5 sm:h-5 ${activeTab === 'settings' || showStudioMenu ? 'stroke-[2.5]' : 'stroke-2'}`} />
+            <span className={`text-[10px] sm:text-[11px] leading-tight text-center truncate w-full ${activeTab === 'settings' || showStudioMenu ? 'font-bold' : 'font-medium'}`}>
               สตูดิโอ
             </span>
             {activeTab === 'settings' && (
@@ -678,21 +704,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToClient }
             )}
           </button>
 
-          {/* Tab 4: Settings (ตั้งค่า - Account & Security) */}
+          {/* Tab 5: Settings (ตั้งค่า - Account & Security) */}
           <button
             type="button"
             onClick={() => {
               setActiveTab('account');
               setShowStudioMenu(false);
             }}
-            className={`py-1.5 px-1 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+            className={`py-1.5 px-0.5 sm:px-1 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
               activeTab === 'account'
                 ? 'text-[#E84D84] bg-[#FAF0F3]'
                 : 'text-[#666] hover:text-[#1E1E1E] hover:bg-black/5'
             }`}
           >
-            <Settings className={`w-5 h-5 ${activeTab === 'account' ? 'stroke-[2.5]' : 'stroke-2'}`} />
-            <span className={`text-[11px] leading-tight ${activeTab === 'account' ? 'font-bold' : 'font-medium'}`}>
+            <Settings className={`w-4.5 h-4.5 sm:w-5 sm:h-5 ${activeTab === 'account' ? 'stroke-[2.5]' : 'stroke-2'}`} />
+            <span className={`text-[10px] sm:text-[11px] leading-tight text-center truncate w-full ${activeTab === 'account' ? 'font-bold' : 'font-medium'}`}>
               ตั้งค่า
             </span>
           </button>
