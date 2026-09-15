@@ -491,13 +491,6 @@ Could you please confirm this booking for me? 🙏`;
                           <Calendar className="w-3.5 h-3.5 shrink-0" />
                           <span>{formatPeriodRange(scheduleData.period.startDate, scheduleData.period.endDate, lang)}</span>
                         </p>
-
-                        {/* Additional Details / Description if present */}
-                        {periodDescription && (
-                          <p className="text-xs text-[#666] mt-2 leading-relaxed bg-white/70 rounded-xl p-2.5 border border-[#F3D5E0]">
-                            {periodDescription}
-                          </p>
-                        )}
                       </div>
 
                       {/* Mini Slot Stats Pill */}
@@ -510,6 +503,13 @@ Could you please confirm this booking for me? 🙏`;
                         </div>
                       </div>
                     </div>
+
+                    {/* Additional Details / Description if present - spans full card width */}
+                    {periodDescription && (
+                      <p className="text-xs text-[#666] mt-3 leading-relaxed bg-white/70 rounded-xl p-2.5 border border-[#F3D5E0] relative z-10">
+                        {periodDescription}
+                      </p>
+                    )}
 
                     {/* Quick Legend & Help */}
                     <div className="mt-3 pt-3 border-t border-[#F0E4E8] flex items-center justify-between text-[11px] text-[#666]">
