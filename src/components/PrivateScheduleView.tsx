@@ -542,15 +542,29 @@ Could you please confirm this booking for me? 🙏`;
                             {mSpan.monthLabel}
                           </div>
                         )}
-                        <div className="grid grid-cols-7 gap-1 text-center mb-1.5">
+                        <div className="grid grid-cols-7 text-center mb-1.5">
                           {(lang === 'th' ? ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'] : ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']).map(d => (
                             <span key={d} className="text-[10px] font-bold text-[#999]">{d}</span>
                           ))}
                         </div>
-                        <div className="grid grid-cols-7 gap-1.5">
+                        <div className="grid grid-cols-7 gap-y-1.5 text-center">
                           {mSpan.cells.map((cell, idx) => {
                             if (!cell.dateStr) return <div key={idx} />; // empty padding cell for month alignment
                             const isInPeriod = cell.dateStr >= scheduleData.period.startDate && cell.dateStr <= scheduleData.period.endDate;
+                            const isPeriodStart = cell.dateStr === scheduleData.period.startDate;
+                            const isPeriodEnd = cell.dateStr === scheduleData.period.endDate;
+
+                            // Shape: rounded on the outer edge(s) where the ribbon begins/ends, flat where it continues to a neighboring day
+                            const ribbonShapeClass = isInPeriod
+                              ? (isPeriodStart && isPeriodEnd)
+                                ? 'rounded-full'        // period is only 1 day long — full circle, no ribbon needed
+                                : isPeriodStart
+                                  ? 'rounded-l-full'    // first day — rounded on the left, flat on the right (continues into next day)
+                                  : isPeriodEnd
+                                    ? 'rounded-r-full'  // last day — rounded on the right, flat on the left
+                                    : ''                // middle day — no rounding at all, flows seamlessly between neighbors
+                              : 'rounded-full';
+
                             const daySlots = bookingsByDate.get(cell.dateStr) || [];
                             const isFullyBooked = isInPeriod && daySlots.length > 0 && daySlots.every(s => s.booking.status === 'booked');
                             const isSelected = cell.dateStr === selectedDate;
@@ -561,18 +575,18 @@ Could you please confirm this booking for me? 🙏`;
                                 type="button"
                                 disabled={!isInPeriod}
                                 onClick={() => isInPeriod && setSelectedDate(cell.dateStr)}
-                                className={`relative aspect-square rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
+                                className={`relative aspect-square flex items-center justify-center text-xs font-semibold transition-all ${ribbonShapeClass} ${
                                   !isInPeriod
                                     ? 'text-[#D5CEC7] cursor-default' // muted/faded — outside the period range
                                     : isSelected
-                                      ? 'bg-[#E84D84] text-white shadow-md scale-105'
-                                      : 'text-[#333] hover:bg-[#FAF0F3] cursor-pointer'
+                                      ? 'bg-[#E84D84] text-white shadow-md z-10' // selected day: solid pink, sits on top
+                                      : 'bg-[#FCE3EB] text-[#333] hover:bg-[#F8C8D7] cursor-pointer' // in-period, not selected: light pink ribbon background
                                 }`}
-                                title={isInPeriod ? `${cell.dateStr} ${isFullyBooked ? '(เต็ม)' : ''}` : undefined}
+                                title={isInPeriod ? `${cell.dateStr} ${isFullyBooked ? (lang === 'th' ? '(เต็ม)' : '(Fully booked)') : ''}` : undefined}
                               >
                                 {cell.dayNum}
                                 {isFullyBooked && (
-                                  <span className="absolute inset-0 rounded-full ring-2 ring-[#D92D4B] pointer-events-none" />
+                                  <span className="absolute inset-0 rounded-full ring-2 ring-[#D92D4B] pointer-events-none z-20" />
                                 )}
                               </button>
                             );

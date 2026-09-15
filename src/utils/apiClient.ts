@@ -650,6 +650,46 @@ export async function apiTogglePrivateScheduleBooking(id: string, status?: 'avai
 }
 
 /**
+ * Admin: Fetch specific private schedule period details
+ */
+export async function apiFetchPrivateSchedulePeriod(periodId: string): Promise<ApiResponse> {
+  const token = getAuthToken();
+  try {
+    const res = await fetch(`${API_BASE}/admin/private-schedule/periods/${periodId}`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    });
+    return handleResponse(res);
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error' };
+  }
+}
+
+/**
+ * Admin: Update private schedule period (title, dates, description)
+ */
+export async function apiUpdatePrivateSchedulePeriod(
+  periodId: string,
+  data: Partial<PrivateSchedulePeriod>
+): Promise<ApiResponse> {
+  const token = getAuthToken();
+  try {
+    const res = await fetch(`${API_BASE}/admin/private-schedule/periods/${periodId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(data)
+    });
+    return handleResponse(res);
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error' };
+  }
+}
+
+/**
  * Admin: Delete private schedule period
  */
 export async function apiDeletePrivateSchedulePeriod(periodId: string): Promise<ApiResponse> {

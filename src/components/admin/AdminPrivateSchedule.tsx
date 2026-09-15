@@ -8,7 +8,9 @@ import {
 import {
   apiFetchCurrentPrivateSchedule,
   apiFetchAllPrivateSchedulePeriods,
+  apiFetchPrivateSchedulePeriod,
   apiCreatePrivateSchedulePeriod,
+  apiUpdatePrivateSchedulePeriod,
   apiTogglePrivateScheduleBooking,
   apiDeletePrivateSchedulePeriod
 } from '../../utils/apiClient';
@@ -27,7 +29,8 @@ import {
   ChevronRight,
   History,
   Grid,
-  Check
+  Check,
+  Pencil
 } from 'lucide-react';
 
 const THAI_DAYS = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
@@ -96,6 +99,8 @@ export const AdminPrivateSchedule: React.FC = () => {
   const [currentPeriodData, setCurrentPeriodData] = useState<PrivateSchedulePeriodWithDetails | null>(null);
   const [allPeriods, setAllPeriods] = useState<PrivateSchedulePeriod[]>([]);
   const [showCreateForm, setShowCreateForm] = useState<boolean>(false);
+  const [editingPeriod, setEditingPeriod] = useState<PrivateSchedulePeriod | null>(null);
+  const [editingPeriodBookings, setEditingPeriodBookings] = useState<PrivateScheduleBooking[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [togglingSlotId, setTogglingSlotId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -264,8 +269,67 @@ export const AdminPrivateSchedule: React.FC = () => {
     setFormSlots(formSlots.map(s => s.id === id ? { ...s, [field]: value } : s));
   };
 
-  // Submit new period
-  const handleCreatePeriod = async (e: React.FormEvent) => {
+  // Open edit form for a period
+  const openEditForm = async (period: PrivateSchedulePeriod) => {
+    setEditingPeriod(period);
+    setFormTitle(period.title || '');
+    setFormTitleEn(period.titleEn || '');
+    setFormDescription(period.description || '');
+    setFormDescriptionEn(period.descriptionEn || '');
+    setFormStartDate(period.startDate);
+    setFormEndDate(period.endDate);
+
+    if (currentPeriodData && currentPeriodData.period.id === period.id) {
+      setFormSlots(currentPeriodData.slots.map(s => ({ id: s.id, startTime: s.startTime, endTime: s.endTime })));
+      setEditingPeriodBookings(currentPeriodData.bookings);
+    } else {
+      try {
+        const res = await apiFetchPrivateSchedulePeriod(period.id);
+        if (res.success && res.data) {
+          if (Array.isArray(res.data.slots)) {
+            setFormSlots(res.data.slots.map((s: any) => ({ id: s.id, startTime: s.startTime, endTime: s.endTime })));
+          }
+          if (Array.isArray(res.data.bookings)) {
+            setEditingPeriodBookings(res.data.bookings);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching period for edit:', err);
+      }
+    }
+
+    setShowCreateForm(true);
+    setActiveTab('current');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Open create form
+  const openCreateForm = () => {
+    setEditingPeriod(null);
+    setEditingPeriodBookings([]);
+    setFormTitle('สาขาราชเทวี');
+    setFormTitleEn('');
+    setFormDescription('');
+    setFormDescriptionEn('');
+    const today = new Date();
+    setFormStartDate(today.toISOString().split('T')[0]);
+    const end = new Date();
+    end.setDate(end.getDate() + 6);
+    setFormEndDate(end.toISOString().split('T')[0]);
+    setFormSlots(DEFAULT_SLOTS);
+    setShowCreateForm(true);
+    setActiveTab('current');
+  };
+
+  // Cancel form
+  const handleCancelForm = () => {
+    setEditingPeriod(null);
+    setEditingPeriodBookings([]);
+    setShowCreateForm(false);
+  };
+
+  // Submit new period or save edits
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formTitle.trim()) {
       showToast('กรุณาระบุชื่อรอบ / กิจกรรม');
@@ -279,6 +343,52 @@ export const AdminPrivateSchedule: React.FC = () => {
       showToast('วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มต้น');
       return;
     }
+
+    // 1. Edit Mode
+    if (editingPeriod) {
+      // Check if shrinking date range would drop any booked slots
+      if (editingPeriodBookings.length > 0) {
+        const droppedBookings = editingPeriodBookings.filter(
+          b => (b.date < formStartDate || b.date > formEndDate) && b.status === 'booked'
+        );
+        if (droppedBookings.length > 0) {
+          const droppedDates = Array.from(new Set(droppedBookings.map(b => b.date))).sort();
+          const confirmMsg = `การเปลี่ยนช่วงวันที่นี้จะลบข้อมูลการจองที่มีอยู่ในวันที่ ${droppedDates.join(', ')} ที่มีสถานะจองแล้ว ต้องการดำเนินการต่อหรือไม่?`;
+          if (!window.confirm(confirmMsg)) {
+            return;
+          }
+        }
+      }
+
+      setIsSubmitting(true);
+      try {
+        const res = await apiUpdatePrivateSchedulePeriod(editingPeriod.id, {
+          title: formTitle.trim(),
+          titleEn: formTitleEn.trim() || undefined,
+          description: formDescription.trim() || undefined,
+          descriptionEn: formDescriptionEn.trim() || undefined,
+          startDate: formStartDate,
+          endDate: formEndDate
+        });
+
+        if (res.success) {
+          showToast('แก้ไขรอบตารางคิว Private สำเร็จ');
+          handleCancelForm();
+          await loadCurrentPeriod(true);
+          await loadAllPeriods();
+        } else {
+          showToast(res.error || 'แก้ไขรอบไม่สำเร็จ');
+        }
+      } catch (err: any) {
+        console.error('Update period error:', err);
+        showToast(err.message || 'เกิดข้อผิดพลาดในการบันทึก');
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    // 2. Create Mode
     if (formSlots.length === 0) {
       showToast('กรุณาเพิ่ม Slot เวลาอย่างน้อย 1 รายการ');
       return;
@@ -442,17 +552,31 @@ export const AdminPrivateSchedule: React.FC = () => {
               <div className="flex items-center justify-between pb-4 mb-4 border-b border-[#F2ECE4]">
                 <div>
                   <h3 className="text-base font-bold text-[#1E1E1E] flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-[#E84D84]" />
-                    <span>สร้างรอบตารางคิว Private ใหม่</span>
+                    {editingPeriod ? (
+                      <>
+                        <Pencil className="w-4 h-4 text-[#E84D84]" />
+                        <span>แก้ไขรอบตารางคิว Private</span>
+                        <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-[#FAF0F3] text-[#E84D84] font-bold border border-[#F3D5E0]">
+                          กำลังแก้ไข
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 text-[#E84D84]" />
+                        <span>สร้างรอบตารางคิว Private ใหม่</span>
+                      </>
+                    )}
                   </h3>
                   <p className="text-xs text-[#777] mt-0.5">
-                    กำหนดชื่อรอบ วันที่ และ Slot เวลา ระบบจะสร้างตารางคิวให้โดยอัตโนมัติ
+                    {editingPeriod
+                      ? 'ปรับปรุงชื่อรอบ วันที่ และคำอธิบาย (หากขยายช่วงวันที่ ระบบจะสร้างคิวว่างตาม Slot เหล่านี้ให้อัตโนมัติ)'
+                      : 'กำหนดชื่อรอบ วันที่ และ Slot เวลา ระบบจะสร้างตารางคิวให้โดยอัตโนมัติ'}
                   </p>
                 </div>
-                {currentPeriodData && (
+                {(currentPeriodData || editingPeriod) && (
                   <button
                     type="button"
-                    onClick={() => setShowCreateForm(false)}
+                    onClick={handleCancelForm}
                     className="text-xs text-[#888] hover:text-[#1E1E1E] underline cursor-pointer"
                   >
                     ยกเลิก
@@ -460,7 +584,7 @@ export const AdminPrivateSchedule: React.FC = () => {
                 )}
               </div>
 
-              <form onSubmit={handleCreatePeriod} className="space-y-5">
+              <form onSubmit={handleFormSubmit} className="space-y-5">
                 {/* 1. Title / Location / Activity */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -565,59 +689,90 @@ export const AdminPrivateSchedule: React.FC = () => {
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-xs font-bold text-[#1E1E1E] flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5 text-[#E84D84]" />
-                      <span>ช่วงเวลาประจำวัน (Slot Templates)</span>
+                      <span>
+                        {editingPeriod
+                          ? 'ช่วงเวลาประจำวัน (Slot Templates — อ้างอิงตามรอบที่สร้างไว้)'
+                          : 'ช่วงเวลาประจำวัน (Slot Templates)'}
+                      </span>
                     </label>
-                    <button
-                      type="button"
-                      onClick={handleAddSlot}
-                      className="px-3 py-1 rounded-xl bg-[#FAF0F3] text-[#E84D84] hover:bg-[#E84D84] hover:text-white text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>เพิ่ม Slot</span>
-                    </button>
-                  </div>
-
-                  <div className="space-y-2.5">
-                    {formSlots.map((slot, idx) => (
-                      <div
-                        key={slot.id}
-                        className="flex items-center gap-2 p-2.5 bg-[#FAF8F5] border border-[#E5DFD7] rounded-2xl"
+                    {!editingPeriod ? (
+                      <button
+                        type="button"
+                        onClick={handleAddSlot}
+                        className="px-3 py-1 rounded-xl bg-[#FAF0F3] text-[#E84D84] hover:bg-[#E84D84] hover:text-white text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
                       >
-                        <span className="w-6 h-6 rounded-lg bg-white border border-[#E5DFD7] flex items-center justify-center text-[11px] font-bold text-[#666] shrink-0">
-                          {idx + 1}
-                        </span>
-
-                        <div className="flex items-center gap-2 flex-1">
-                          <input
-                            type="time"
-                            value={slot.startTime}
-                            onChange={(e) => handleUpdateSlotTime(slot.id, 'startTime', e.target.value)}
-                            className="px-2.5 py-1.5 rounded-xl border border-[#E5DFD7] bg-white text-xs font-medium focus:outline-none focus:border-[#E84D84]"
-                            required
-                          />
-                          <span className="text-xs text-[#888]">-</span>
-                          <input
-                            type="time"
-                            value={slot.endTime}
-                            onChange={(e) => handleUpdateSlotTime(slot.id, 'endTime', e.target.value)}
-                            className="px-2.5 py-1.5 rounded-xl border border-[#E5DFD7] bg-white text-xs font-medium focus:outline-none focus:border-[#E84D84]"
-                            required
-                          />
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveSlot(slot.id)}
-                          className="p-1.5 rounded-xl hover:bg-[#FEF2F2] text-[#999] hover:text-[#DC2626] transition-colors cursor-pointer"
-                          title="ลบ Slot นี้"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>เพิ่ม Slot</span>
+                      </button>
+                    ) : (
+                      <span className="text-[11px] text-[#888] bg-[#FAF8F5] px-2.5 py-0.5 rounded-full border border-[#E5DFD7]">
+                        {formSlots.length} Slots/วัน (คงเดิม)
+                      </span>
+                    )}
                   </div>
+
+                  {editingPeriod ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {formSlots.map((slot, idx) => (
+                        <div
+                          key={slot.id || idx}
+                          className="flex items-center gap-2 p-2.5 bg-[#FAF8F5] border border-[#E5DFD7] rounded-2xl"
+                        >
+                          <span className="w-6 h-6 rounded-lg bg-white border border-[#E5DFD7] flex items-center justify-center text-[11px] font-bold text-[#666] shrink-0">
+                            {idx + 1}
+                          </span>
+                          <span className="text-xs font-bold text-[#1E1E1E]">
+                            {slot.startTime} - {slot.endTime}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {formSlots.map((slot, idx) => (
+                        <div
+                          key={slot.id}
+                          className="flex items-center gap-2 p-2.5 bg-[#FAF8F5] border border-[#E5DFD7] rounded-2xl"
+                        >
+                          <span className="w-6 h-6 rounded-lg bg-white border border-[#E5DFD7] flex items-center justify-center text-[11px] font-bold text-[#666] shrink-0">
+                            {idx + 1}
+                          </span>
+
+                          <div className="flex items-center gap-2 flex-1">
+                            <input
+                              type="time"
+                              value={slot.startTime}
+                              onChange={(e) => handleUpdateSlotTime(slot.id, 'startTime', e.target.value)}
+                              className="px-2.5 py-1.5 rounded-xl border border-[#E5DFD7] bg-white text-xs font-medium focus:outline-none focus:border-[#E84D84]"
+                              required
+                            />
+                            <span className="text-xs text-[#888]">-</span>
+                            <input
+                              type="time"
+                              value={slot.endTime}
+                              onChange={(e) => handleUpdateSlotTime(slot.id, 'endTime', e.target.value)}
+                              className="px-2.5 py-1.5 rounded-xl border border-[#E5DFD7] bg-white text-xs font-medium focus:outline-none focus:border-[#E84D84]"
+                              required
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSlot(slot.id)}
+                            className="p-1.5 rounded-xl hover:bg-[#FEF2F2] text-[#999] hover:text-[#DC2626] transition-colors cursor-pointer"
+                            title="ลบ Slot นี้"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <span className="text-[11px] text-[#888] mt-1.5 block">
-                    * ทุกวันในช่วงวันที่เลือก จะมี Slot เวลาเหล่านี้ถูกสร้างขึ้นเพื่อให้สลับสถานะ
+                    {editingPeriod
+                      ? '* ในโหมดแก้ไข Slot เวลาจะคงเดิมตามที่สร้างไว้ หากขยายช่วงวันที่ ระบบจะสร้างคิวว่างตาม Slot เหล่านี้ให้อัตโนมัติ'
+                      : '* ทุกวันในช่วงวันที่เลือก จะมี Slot เวลาเหล่านี้ถูกสร้างขึ้นเพื่อให้สลับสถานะ'}
                   </span>
                 </div>
 
@@ -631,7 +786,12 @@ export const AdminPrivateSchedule: React.FC = () => {
                     {isSubmitting ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>กำลังสร้างตารางคิว...</span>
+                        <span>{editingPeriod ? 'กำลังบันทึกการแก้ไข...' : 'กำลังสร้างตารางคิว...'}</span>
+                      </>
+                    ) : editingPeriod ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        <span>บันทึกการแก้ไขรอบ Private</span>
                       </>
                     ) : (
                       <>
@@ -641,10 +801,10 @@ export const AdminPrivateSchedule: React.FC = () => {
                     )}
                   </button>
 
-                  {currentPeriodData && (
+                  {(currentPeriodData || editingPeriod) && (
                     <button
                       type="button"
-                      onClick={() => setShowCreateForm(false)}
+                      onClick={handleCancelForm}
                       className="py-3 px-4 rounded-2xl bg-[#FAF8F5] border border-[#E5DFD7] text-[#555] text-xs font-semibold hover:bg-[#F2ECE4] transition-all cursor-pointer"
                     >
                       ยกเลิก
@@ -713,7 +873,7 @@ export const AdminPrivateSchedule: React.FC = () => {
                     {!showCreateForm && (
                       <button
                         type="button"
-                        onClick={() => setShowCreateForm(true)}
+                        onClick={openCreateForm}
                         className="px-3 py-2 rounded-2xl bg-[#FAF0F3] hover:bg-[#E84D84] hover:text-white text-[#E84D84] text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
                         title="สร้างรอบใหม่เพิ่มเติม"
                       >
@@ -721,6 +881,16 @@ export const AdminPrivateSchedule: React.FC = () => {
                         <span className="hidden sm:inline">สร้างรอบใหม่</span>
                       </button>
                     )}
+
+                    <button
+                      type="button"
+                      onClick={() => openEditForm(currentPeriodData.period)}
+                      className="px-3 py-2 rounded-2xl text-xs font-bold bg-[#FAF0F3] hover:bg-[#FCE6EC] text-[#E84D84] border border-[#F3D5E0] flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+                      title="แก้ไขรอบนี้"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>แก้ไข</span>
+                    </button>
 
                     <button
                       type="button"
@@ -927,14 +1097,26 @@ export const AdminPrivateSchedule: React.FC = () => {
                         )}
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => handleDeletePeriod(p.id, p.title)}
-                        className="p-2 rounded-xl text-[#999] hover:text-[#DC2626] hover:bg-[#FEF2F2] transition-colors cursor-pointer"
-                        title="ลบรอบนี้"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => openEditForm(p)}
+                          className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#FAF0F3] hover:bg-[#FCE6EC] text-[#E84D84] border border-[#F3D5E0] flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
+                          title="แก้ไขรอบนี้"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          <span>แก้ไข</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePeriod(p.id, p.title)}
+                          className="p-1.5 rounded-xl text-[#999] hover:text-[#DC2626] hover:bg-[#FEF2F2] transition-colors cursor-pointer"
+                          title="ลบรอบนี้"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="mt-4 pt-3 border-t border-[#F2ECE4] flex items-center justify-between text-xs">

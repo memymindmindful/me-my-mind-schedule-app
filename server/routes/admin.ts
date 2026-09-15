@@ -1644,6 +1644,174 @@ adminRouter.post('/admin/private-schedule/periods', authenticateToken, (req: Aut
 });
 
 /**
+ * GET /api/admin/private-schedule/periods/:id
+ * Get full details of a specific period (period, slots, bookings) (Requires Auth)
+ */
+adminRouter.get('/admin/private-schedule/periods/:id', authenticateToken, (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+
+    const periodRows = db.exec(`
+      SELECT id, title, titleEn, description, descriptionEn, startDate, endDate, createdAt, updatedAt
+      FROM private_schedule_periods
+      WHERE id = ?
+    `, [id]);
+
+    if (!periodRows || periodRows.length === 0 || periodRows[0].values.length === 0) {
+      res.status(404).json({ success: false, error: 'Period not found', code: 'NOT_FOUND' });
+      return;
+    }
+
+    const r = periodRows[0].values[0];
+    const period = {
+      id: r[0] as string,
+      title: r[1] as string,
+      titleEn: (r[2] as string) || '',
+      description: (r[3] as string) || '',
+      descriptionEn: (r[4] as string) || '',
+      startDate: r[5] as string,
+      endDate: r[6] as string,
+      createdAt: (r[7] as string) || '',
+      updatedAt: (r[8] as string) || ''
+    };
+
+    const slotRows = db.exec(
+      "SELECT id, periodId, startTime, endTime, displayOrder FROM private_schedule_slot_templates WHERE periodId = ? ORDER BY displayOrder ASC, startTime ASC",
+      [id]
+    );
+    const slots = slotRows && slotRows.length > 0
+      ? slotRows[0].values.map(s => ({
+          id: s[0] as string,
+          periodId: s[1] as string,
+          startTime: s[2] as string,
+          endTime: s[3] as string,
+          displayOrder: Number(s[4]) || 0
+        }))
+      : [];
+
+    const bookingRows = db.exec(
+      "SELECT id, periodId, slotTemplateId, date, status FROM private_schedule_bookings WHERE periodId = ? ORDER BY date ASC, slotTemplateId ASC",
+      [id]
+    );
+    const bookings = bookingRows && bookingRows.length > 0
+      ? bookingRows[0].values.map(b => ({
+          id: b[0] as string,
+          periodId: b[1] as string,
+          slotTemplateId: b[2] as string,
+          date: b[3] as string,
+          status: (b[4] as string) || 'available'
+        }))
+      : [];
+
+    res.json({
+      success: true,
+      data: {
+        period,
+        slots,
+        bookings
+      }
+    });
+  } catch (error: any) {
+    console.error('[GET /admin/private-schedule/periods/:id]', error);
+    res.status(500).json({ success: false, error: error.message, code: 'SERVER_ERROR' });
+  }
+});
+
+/**
+ * PUT /api/admin/private-schedule/periods/:id
+ * Updates an existing period's title, dates, and description.
+ * Reconciles booking rows if date range changes. (Requires Auth)
+ */
+adminRouter.put('/admin/private-schedule/periods/:id', authenticateToken, (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    const body = req.body;
+
+    const existing = db.exec("SELECT id, title, titleEn, description, descriptionEn, startDate, endDate FROM private_schedule_periods WHERE id = ?", [id]);
+    if (!existing || existing.length === 0 || existing[0].values.length === 0) {
+      res.status(404).json({ success: false, error: 'Period not found', code: 'NOT_FOUND' });
+      return;
+    }
+    const row = existing[0].values[0];
+    const oldStartDate = row[5] as string;
+    const oldEndDate = row[6] as string;
+
+    const newStartDate = body.startDate ? String(body.startDate).trim() : oldStartDate;
+    const newEndDate = body.endDate ? String(body.endDate).trim() : oldEndDate;
+    const newTitle = body.title !== undefined ? String(body.title).trim() : (row[1] as string);
+    const newTitleEn = body.titleEn !== undefined ? (body.titleEn ? String(body.titleEn).trim() : null) : (row[2] as string | null);
+    const newDesc = body.description !== undefined ? (body.description ? String(body.description).trim() : null) : (row[3] as string | null);
+    const newDescEn = body.descriptionEn !== undefined ? (body.descriptionEn ? String(body.descriptionEn).trim() : null) : (row[4] as string | null);
+
+    // Update the period's basic fields
+    const updateParams = [
+      newTitle,
+      newTitleEn,
+      newStartDate,
+      newEndDate,
+      newDesc,
+      newDescEn,
+      id
+    ].map(v => (v === undefined ? null : v));
+
+    db.run(`
+      UPDATE private_schedule_periods SET
+        title = COALESCE(?, title),
+        titleEn = ?,
+        startDate = COALESCE(?, startDate),
+        endDate = COALESCE(?, endDate),
+        description = ?,
+        descriptionEn = ?,
+        updatedAt = datetime('now')
+      WHERE id = ?
+    `, updateParams);
+
+    // If the date range CHANGED, reconcile the booking rows:
+    if (newStartDate !== oldStartDate || newEndDate !== oldEndDate) {
+      const slotTemplatesResult = db.exec("SELECT id, startTime, endTime FROM private_schedule_slot_templates WHERE periodId = ? ORDER BY displayOrder ASC", [id]);
+      const templates = slotTemplatesResult && slotTemplatesResult.length > 0 ? slotTemplatesResult[0].values : [];
+
+      // 1. Remove booking rows for dates that fall OUTSIDE the new range
+      db.run("DELETE FROM private_schedule_bookings WHERE periodId = ? AND (date < ? OR date > ?)", [id, newStartDate, newEndDate]);
+
+      // 2. Add booking rows for any NEW dates within the expanded range that don't already have rows
+      const existingDatesResult = db.exec("SELECT DISTINCT date FROM private_schedule_bookings WHERE periodId = ?", [id]);
+      const existingDates = new Set(
+        (existingDatesResult && existingDatesResult.length > 0 ? existingDatesResult[0].values : []).map(r => r[0] as string)
+      );
+
+      const [sY, sM, sD] = newStartDate.split('-').map(Number);
+      const [eY, eM, eD] = newEndDate.split('-').map(Number);
+      let cursor = new Date(Date.UTC(sY, sM - 1, sD));
+      const end = new Date(Date.UTC(eY, eM - 1, eD));
+
+      while (cursor <= end) {
+        const dateStr = cursor.toISOString().split('T')[0];
+        if (!existingDates.has(dateStr)) {
+          for (const templateRow of templates) {
+            const templateId = templateRow[0] as string;
+            const bookingId = uuidv4();
+            db.run(
+              "INSERT INTO private_schedule_bookings (id, periodId, slotTemplateId, date, status) VALUES (?, ?, ?, ?, 'available')",
+              [bookingId, id, templateId, dateStr]
+            );
+          }
+        }
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+      }
+    }
+
+    saveDatabase();
+    res.json({ success: true, message: 'Period updated successfully' });
+  } catch (error: any) {
+    console.error('[PUT /admin/private-schedule/periods/:id]', error);
+    res.status(500).json({ success: false, error: error.message, code: 'SERVER_ERROR' });
+  }
+});
+
+/**
  * PUT /api/admin/private-schedule/bookings/:id
  * Toggle status of a single booking slot ('available' <-> 'booked') (Requires Auth)
  */
